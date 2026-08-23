@@ -1,4 +1,3 @@
-import { sentrySvelteKit } from '@sentry/sveltekit';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
@@ -17,13 +16,6 @@ const kitGeneratedDev = path.resolve(
 
 export default defineConfig({
 	plugins: [
-		sentrySvelteKit({
-			adapter: 'node',
-			autoUploadSourceMaps: Boolean(process.env.SENTRY_AUTH_TOKEN),
-			org: process.env.SENTRY_ORG,
-			project: process.env.SENTRY_PROJECT,
-			authToken: process.env.SENTRY_AUTH_TOKEN
-		}),
 		tailwindcss(),
 		sveltekit({
 			compilerOptions: {

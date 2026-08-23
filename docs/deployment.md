@@ -14,10 +14,6 @@ Set these on the host. Do not commit production values.
 DATABASE_URL=postgres://<user>:<password>@<private-postgres-host>:5432/<database>
 ORIGIN=https://votum.example
 BETTER_AUTH_SECRET=<at least 32 random characters>
-SENTRY_DSN=<optional>
-SENTRY_ORG=<optional, source maps>
-SENTRY_PROJECT=<optional, source maps>
-SENTRY_AUTH_TOKEN=<optional, source maps>
 ```
 
 The image already sets `PROTOCOL_HEADER=x-forwarded-proto` and `HOST_HEADER=x-forwarded-host` for the reverse proxy. Leave PostgreSQL off the public internet. No public hostname, no host port.
