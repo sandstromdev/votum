@@ -1,0 +1,6 @@
+{
+	"files.associations": {
+		"*.css": "tailwindcss"
+	},
+	"js/ts.preferences.importModuleSpecifierEnding": "js"
+}

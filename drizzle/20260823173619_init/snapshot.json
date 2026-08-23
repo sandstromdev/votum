@@ -1,0 +1,2529 @@
+{
+  "version": "8",
+  "dialect": "postgres",
+  "id": "65b25a9f-339d-4587-8f58-383b41feb586",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "ddl": [
+    {
+      "values": [
+        "draft",
+        "open",
+        "closed"
+      ],
+      "name": "meeting_lifecycle",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "accept",
+        "vacancy"
+      ],
+      "name": "incomplete_resolution_type",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "simple",
+        "qualified"
+      ],
+      "name": "majority_rule",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "single",
+        "multiple"
+      ],
+      "name": "selection_vote_mode",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "decision",
+        "selection"
+      ],
+      "name": "vote_kind",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "draft",
+        "open",
+        "closed",
+        "invalidated"
+      ],
+      "name": "vote_lifecycle",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "account",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "rate_limit",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "session",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "user",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "verification",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "meeting",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "outcome_resolution",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "outcome_snapshot",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "ballot",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "participant_token",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "participant_token_anomaly",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "decision_vote_config",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "selection_option",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "selection_vote_config",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "vote",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "issuer",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "provider_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "access_token",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "refresh_token",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id_token",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "access_token_expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "refresh_token_expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "scope",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "password",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "key",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rate_limit"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "count",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rate_limit"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "last_request",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rate_limit"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "session"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "session"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "token",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "session"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "session"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "session"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "ip_address",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "session"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "user_agent",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "session"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "session"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "impersonated_by",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "session"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "email",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "email_verified",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "image",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "role",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "banned",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "ban_reason",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "ban_expires",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "verification"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "identifier",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "verification"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "value",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "verification"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "verification"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "verification"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "verification"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "organizer_user_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "public_locator",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "title",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "type": "meeting_lifecycle",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'draft'",
+      "generated": null,
+      "identity": null,
+      "name": "lifecycle",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expected_participant_count",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "presentation_qr_enabled",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "revision",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "opened_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "closed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "vote_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "outcome_resolution"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "meeting_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "outcome_resolution"
+    },
+    {
+      "type": "incomplete_resolution_type",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "type",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "outcome_resolution"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "resolved_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "outcome_resolution"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "vote_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "outcome_snapshot"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "meeting_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "outcome_snapshot"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "document",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "outcome_snapshot"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "outcome_snapshot"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "ballot"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "meeting_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "ballot"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "vote_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "ballot"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "participant_token_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "ballot"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "payload",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "ballot"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "ballot"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "ballot"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "participant_token"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "meeting_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "participant_token"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "token_hash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "participant_token"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "participant_token"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "participant_token_anomaly"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "participant_token_anomaly"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "meeting_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "participant_token_anomaly"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "vote_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "participant_token_anomaly"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "payload",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "participant_token_anomaly"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "participant_token_anomaly"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "vote_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "decision_vote_config"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "support_label",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "decision_vote_config"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "oppose_label",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "decision_vote_config"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "abstention_label",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "decision_vote_config"
+    },
+    {
+      "type": "majority_rule",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'simple'",
+      "generated": null,
+      "identity": null,
+      "name": "majority_rule",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "decision_vote_config"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "abstentions_counted",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "decision_vote_config"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "selection_option"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "vote_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "selection_option"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "label",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "selection_option"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "position",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "selection_option"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "vote_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "selection_vote_config"
+    },
+    {
+      "type": "selection_vote_mode",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "mode",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "selection_vote_config"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "position_count",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "selection_vote_config"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "vacancy_enabled",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "selection_vote_config"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "meeting_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "position",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "title",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "vote_kind",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "kind",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "vote_lifecycle",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'draft'",
+      "generated": null,
+      "identity": null,
+      "name": "lifecycle",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "rerun_of_vote_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "opened_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "closed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "revealed",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "revealed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "public_result_breakdown_enabled",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "invalidation_reason",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "invalidated_by_user_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "invalidated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "issuer",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "account_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "account_issuer_accountId_uidx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "account_userId_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "session_userId_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "session"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "identifier",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "verification_identifier_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "verification"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "public_locator",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "meeting_public_locator_uidx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "vote_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "participant_token_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "ballot_vote_participant_token_uidx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "ballot"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "token_hash",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "participant_token_hash_uidx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "participant_token"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "meeting_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "participant_token_id_meeting_id_uidx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "participant_token"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "meeting_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "vote_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "name",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "participant_token_anomaly_meeting_vote_name_uidx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "participant_token_anomaly"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "vote_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "position",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "selection_option_vote_position_uidx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "selection_option"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "meeting_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "position",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "vote_meeting_position_uidx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "meeting_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"lifecycle\" = 'open'",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "vote_one_open_per_meeting_uidx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "user_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "account_user_id_user_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "account"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "user_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "session_user_id_user_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "session"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "organizer_user_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "meeting_organizer_user_id_user_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "vote_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "vote",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "outcome_resolution_vote_id_vote_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "outcome_resolution"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "meeting_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "meeting",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "outcome_resolution_meeting_id_meeting_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "outcome_resolution"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "vote_id",
+        "meeting_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "vote",
+      "columnsTo": [
+        "id",
+        "meeting_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "outcome_resolution_vote_meeting_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "outcome_resolution"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "meeting_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "meeting",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "outcome_snapshot_meeting_id_meeting_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "outcome_snapshot"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "vote_id",
+        "meeting_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "vote",
+      "columnsTo": [
+        "id",
+        "meeting_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "outcome_snapshot_vote_meeting_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "outcome_snapshot"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "meeting_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "meeting",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "ballot_meeting_id_meeting_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "ballot"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "vote_id",
+        "meeting_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "vote",
+      "columnsTo": [
+        "id",
+        "meeting_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "ballot_vote_meeting_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "ballot"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "participant_token_id",
+        "meeting_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "participant_token",
+      "columnsTo": [
+        "id",
+        "meeting_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "ballot_participant_token_meeting_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "ballot"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "meeting_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "meeting",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "participant_token_meeting_id_meeting_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "participant_token"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "meeting_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "meeting",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "participant_token_anomaly_meeting_id_meeting_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "participant_token_anomaly"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "vote_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "vote",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "participant_token_anomaly_vote_id_vote_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "participant_token_anomaly"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "vote_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "vote",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "decision_vote_config_vote_id_vote_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "decision_vote_config"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "vote_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "vote",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "selection_option_vote_id_vote_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "selection_option"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "vote_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "vote",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "selection_vote_config_vote_id_vote_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "selection_vote_config"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "meeting_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "meeting",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "vote_meeting_id_meeting_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "invalidated_by_user_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "vote_invalidated_by_user_id_user_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "rerun_of_vote_id",
+        "meeting_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "vote",
+      "columnsTo": [
+        "id",
+        "meeting_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "vote_rerun_of_vote_meeting_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "account_pkey",
+      "schema": "public",
+      "table": "account",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "key"
+      ],
+      "nameExplicit": false,
+      "name": "rate_limit_pkey",
+      "schema": "public",
+      "table": "rate_limit",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "session_pkey",
+      "schema": "public",
+      "table": "session",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "user_pkey",
+      "schema": "public",
+      "table": "user",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "verification_pkey",
+      "schema": "public",
+      "table": "verification",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "meeting_pkey",
+      "schema": "public",
+      "table": "meeting",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "vote_id"
+      ],
+      "nameExplicit": false,
+      "name": "outcome_resolution_pkey",
+      "schema": "public",
+      "table": "outcome_resolution",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "vote_id"
+      ],
+      "nameExplicit": false,
+      "name": "outcome_snapshot_pkey",
+      "schema": "public",
+      "table": "outcome_snapshot",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "ballot_pkey",
+      "schema": "public",
+      "table": "ballot",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "participant_token_pkey",
+      "schema": "public",
+      "table": "participant_token",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "participant_token_anomaly_pkey",
+      "schema": "public",
+      "table": "participant_token_anomaly",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "vote_id"
+      ],
+      "nameExplicit": false,
+      "name": "decision_vote_config_pkey",
+      "schema": "public",
+      "table": "decision_vote_config",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "selection_option_pkey",
+      "schema": "public",
+      "table": "selection_option",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "vote_id"
+      ],
+      "nameExplicit": false,
+      "name": "selection_vote_config_pkey",
+      "schema": "public",
+      "table": "selection_vote_config",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "vote_pkey",
+      "schema": "public",
+      "table": "vote",
+      "entityType": "pks"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "id",
+        "meeting_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "vote_id_meeting_id_uidx",
+      "entityType": "uniques",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "token"
+      ],
+      "nullsNotDistinct": false,
+      "name": "session_token_key",
+      "schema": "public",
+      "table": "session",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "email"
+      ],
+      "nullsNotDistinct": false,
+      "name": "user_email_key",
+      "schema": "public",
+      "table": "user",
+      "entityType": "uniques"
+    },
+    {
+      "value": "(\n\t\t\t\t(\"lifecycle\" = 'draft' AND \"opened_at\" IS NULL AND \"closed_at\" IS NULL)\n\t\t\t\tOR (\"lifecycle\" = 'open' AND \"opened_at\" IS NOT NULL AND \"closed_at\" IS NULL)\n\t\t\t\tOR (\"lifecycle\" = 'closed' AND \"opened_at\" IS NOT NULL AND \"closed_at\" IS NOT NULL)\n\t\t\t)",
+      "name": "meeting_lifecycle_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "value": "\"revision\" >= 0",
+      "name": "meeting_revision_nonnegative_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "value": "\"expected_participant_count\" IS NULL OR \"expected_participant_count\" > 0",
+      "name": "meeting_expected_participant_count_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "value": "char_length(\"public_locator\") > 0",
+      "name": "meeting_public_locator_present_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "value": "char_length(\"title\") > 0",
+      "name": "meeting_title_present_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "meeting"
+    },
+    {
+      "value": "char_length(\"support_label\") > 0",
+      "name": "decision_support_label_present_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "decision_vote_config"
+    },
+    {
+      "value": "char_length(\"oppose_label\") > 0",
+      "name": "decision_oppose_label_present_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "decision_vote_config"
+    },
+    {
+      "value": "char_length(\"abstention_label\") > 0",
+      "name": "decision_abstention_label_present_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "decision_vote_config"
+    },
+    {
+      "value": "\"majority_rule\" = 'qualified' OR \"abstentions_counted\" = false",
+      "name": "decision_abstentions_only_qualified_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "decision_vote_config"
+    },
+    {
+      "value": "\"position\" >= 0",
+      "name": "selection_option_position_nonnegative_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "selection_option"
+    },
+    {
+      "value": "char_length(\"label\") > 0",
+      "name": "selection_option_label_present_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "selection_option"
+    },
+    {
+      "value": "\"position_count\" > 0",
+      "name": "selection_position_count_positive_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "selection_vote_config"
+    },
+    {
+      "value": "\"mode\" <> 'single' OR \"position_count\" = 1",
+      "name": "selection_single_winner_one_position_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "selection_vote_config"
+    },
+    {
+      "value": "\"position\" >= 0",
+      "name": "vote_position_nonnegative_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "value": "char_length(\"title\") > 0",
+      "name": "vote_title_present_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "value": "\"rerun_of_vote_id\" IS NULL OR \"rerun_of_vote_id\" <> \"id\"",
+      "name": "vote_no_self_rerun_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "vote"
+    },
+    {
+      "value": "(\n\t\t\t\t(\n\t\t\t\t\t\"lifecycle\" = 'draft'\n\t\t\t\t\tAND \"opened_at\" IS NULL\n\t\t\t\t\tAND \"closed_at\" IS NULL\n\t\t\t\t\tAND \"invalidated_at\" IS NULL\n\t\t\t\t\tAND \"revealed\" = false\n\t\t\t\t\tAND \"revealed_at\" IS NULL\n\t\t\t\t)\n\t\t\t\tOR (\n\t\t\t\t\t\"lifecycle\" = 'open'\n\t\t\t\t\tAND \"opened_at\" IS NOT NULL\n\t\t\t\t\tAND \"closed_at\" IS NULL\n\t\t\t\t\tAND \"invalidated_at\" IS NULL\n\t\t\t\t\tAND \"revealed\" = false\n\t\t\t\t\tAND \"revealed_at\" IS NULL\n\t\t\t\t)\n\t\t\t\tOR (\n\t\t\t\t\t\"lifecycle\" = 'closed'\n\t\t\t\t\tAND \"opened_at\" IS NOT NULL\n\t\t\t\t\tAND \"closed_at\" IS NOT NULL\n\t\t\t\t\tAND \"invalidated_at\" IS NULL\n\t\t\t\t\tAND (\n\t\t\t\t\t\t(\"revealed\" = false AND \"revealed_at\" IS NULL)\n\t\t\t\t\t\tOR (\"revealed\" = true AND \"revealed_at\" IS NOT NULL)\n\t\t\t\t\t)\n\t\t\t\t)\n\t\t\t\tOR (\n\t\t\t\t\t\"lifecycle\" = 'invalidated'\n\t\t\t\t\tAND \"opened_at\" IS NOT NULL\n\t\t\t\t\tAND \"invalidated_at\" IS NOT NULL\n\t\t\t\t\tAND \"revealed\" = false\n\t\t\t\t\tAND \"revealed_at\" IS NULL\n\t\t\t\t\tAND \"invalidation_reason\" IS NOT NULL\n\t\t\t\t\tAND \"invalidated_by_user_id\" IS NOT NULL\n\t\t\t\t)\n\t\t\t)",
+      "name": "vote_lifecycle_chk",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "vote"
+    }
+  ],
+  "renames": []
+}

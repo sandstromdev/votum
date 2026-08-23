@@ -1,0 +1,8 @@
+# Meeting links can contain private titles and results. Keep them out of search indexes while
+# leaving the public landing page crawlable.
+User-agent: *
+Disallow: /m/
+Disallow: /p/
+Disallow: /organisera
+Disallow: /logga-in
+Disallow: /api/

@@ -1,0 +1,15 @@
+.git
+.github
+.scratch
+.svelte-kit
+.vscode
+build
+coverage
+node_modules
+test-results
+
+.env
+.env.*
+!.env.example
+
+*.log

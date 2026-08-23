@@ -1,0 +1,9 @@
+# Private ballot readback and explicit Vacancy
+
+Status: accepted
+
+Participants may read their full current Ballot through the browser holding the Meeting-scoped Participant token, but only while the Vote is open. The participant UI preloads that Ballot and submits edits as full replacements; withdrawal remains a separate explicit action. The token remains valid across Votes in the same Meeting, so a recognized token with no Ballot for the new Active Vote is a normal state. This does not expose Ballots to other Participants or the Organizer, but the app is not intended for shared browsers. Vacancy is always explicit in a Multi-winner selection: selecting fewer options than the configured position count leaves the remaining positions unspecified, not vacant. If a Participant token is lost, its Ballot cannot be recovered; the Participant must use an out-of-band channel to ask the Organizer to invalidate the Vote if that matters procedurally.
+
+An unrecognized Participant-token cookie is recorded in a disposable internal diagnostic table containing a machine-readable `name`, optional nullable Meeting and Vote relations, a safe JSONB diagnostic payload, and a timestamp. Ballot reads, submissions, and withdrawals can create diagnostics. The table has no v1 retention job and deduplicates identical anomalies by Meeting, Active Vote, and `name` when those relations are known. Diagnostic relations use `ON DELETE SET NULL` so the table cannot block domain cleanup. The payload stores no token, token hash, Ballot payload, or participant identity and does not automatically invalidate a Vote. Invalidation remains an Organizer decision after a confirmed procedural or data-integrity problem. The table can later be replaced by an issue-reporting service such as Sentry.
+
+An unrecognized token and a token recognized for another Meeting use separate diagnostic names so stale or malformed cookies can be distinguished from missing token records.
