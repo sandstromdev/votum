@@ -22,10 +22,5 @@ export const variables = defineEnvVars({
 		schema: buildOptional(z.string()),
 		description:
 			'Secret used to sign tokens. For production use 32 characters generated with high entropy. See [Better Auth installation](https://www.better-auth.com/docs/installation).'
-	},
-	SENTRY_DSN: {
-		public: true,
-		schema: z.string().optional(),
-		description: 'Sentry project DSN for error monitoring. Safe to expose to the browser.'
 	}
 });
