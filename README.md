@@ -47,6 +47,10 @@ Seeding is limited to `localhost`, `127.0.0.1`, and `::1` by default. To deliber
 bun run db:seed -- --allow-remote
 ```
 
+## Deployment
+
+For production, follow [`docs/deployment.md`](docs/deployment.md).
+
 ## Develop
 
 ```sh

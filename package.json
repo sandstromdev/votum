@@ -22,11 +22,11 @@
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"db:migrate:runtime": "node scripts/server/migrate.mjs",
+		"db:migrate:runtime": "bun run scripts/server/migrate.mjs",
 		"db:seed": "bun run scripts/run-seed.ts",
 		"db:studio": "drizzle-kit studio",
 		"auth:schema": "auth generate --config src/lib/server/auth/config.ts --output src/lib/server/db/schema/auth.generated.ts --yes",
-		"setup:user": "node scripts/server/setup-user.mjs"
+		"setup:user": "bun run scripts/server/setup-user.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
