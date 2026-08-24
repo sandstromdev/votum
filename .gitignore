@@ -28,3 +28,5 @@ test-results
 /coverage/
 
 .eslintcache
+# Sentry Config File
+.env.sentry-build-plugin

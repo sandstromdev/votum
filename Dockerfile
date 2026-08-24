@@ -16,7 +16,10 @@ FROM base AS build
 COPY --from=install /temp/dev/node_modules ./node_modules
 COPY . .
 RUN bunx svelte-kit sync
-RUN bun run build
+RUN --mount=type=secret,id=SENTRY_ORG,env=SENTRY_ORG,required=false \
+	--mount=type=secret,id=SENTRY_PROJECT,env=SENTRY_PROJECT,required=false \
+	--mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN,required=false \
+	bun run build
 
 FROM node:24-trixie-slim AS runtime
 
