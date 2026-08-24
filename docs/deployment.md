@@ -41,11 +41,11 @@ ORIGIN=https://votum.example
 BETTER_AUTH_SECRET=<at least 32 random characters>
 ```
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `DATABASE_URL` | Yes | Connection URL for the PostgreSQL database. |
-| `ORIGIN` | Yes | Public URL where users access Votum, including `https://`. |
-| `BETTER_AUTH_SECRET` | Yes | Secret used by Better Auth. Use at least 32 high-entropy characters. |
+| Variable             | Required | Purpose                                                              |
+| -------------------- | -------- | -------------------------------------------------------------------- |
+| `DATABASE_URL`       | Yes      | Connection URL for the PostgreSQL database.                          |
+| `ORIGIN`             | Yes      | Public URL where users access Votum, including `https://`.           |
+| `BETTER_AUTH_SECRET` | Yes      | Secret used by Better Auth. Use at least 32 high-entropy characters. |
 
 The Dockerfile sets these container defaults:
 
@@ -111,15 +111,15 @@ Do not use `db:push` in production. It changes the database to match the current
 
 The deployment variables are listed first. The remaining variables are used only by one-time setup or local demo scripts.
 
-| Variable | Used by | When to set it | Purpose |
-| --- | --- | --- | --- |
-| `DATABASE_URL` | App and server scripts | Always | PostgreSQL connection URL. |
-| `ORIGIN` | App | Always | Public application URL, including `https://`. |
-| `BETTER_AUTH_SECRET` | App | Always | Secret used by Better Auth. Use at least 32 high-entropy characters. |
-| `SETUP_USER_EMAIL` | `setup-user.mjs` | First deployment only | Email address for the first Organizer. |
-| `SETUP_USER_PASSWORD` | `setup-user.mjs` | First deployment only | Password for the first Organizer. It must contain at least 12 characters. |
-| `SETUP_USER_NAME` | `setup-user.mjs` | First deployment only | Name for the first Organizer. |
-| `SEED_ORGANIZER_EMAIL` | `db:seed` | Local demo setup | Email address of the Organizer who owns the demo Meeting. |
-| `SEED_ORGANIZER_USER_ID` | `db:seed` | Local demo setup | User ID of the Organizer who owns the demo Meeting. Use this instead of `SEED_ORGANIZER_EMAIL`. |
+| Variable                 | Used by                | When to set it        | Purpose                                                                                         |
+| ------------------------ | ---------------------- | --------------------- | ----------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`           | App and server scripts | Always                | PostgreSQL connection URL.                                                                      |
+| `ORIGIN`                 | App                    | Always                | Public application URL, including `https://`.                                                   |
+| `BETTER_AUTH_SECRET`     | App                    | Always                | Secret used by Better Auth. Use at least 32 high-entropy characters.                            |
+| `SETUP_USER_EMAIL`       | `setup-user.mjs`       | First deployment only | Email address for the first Organizer.                                                          |
+| `SETUP_USER_PASSWORD`    | `setup-user.mjs`       | First deployment only | Password for the first Organizer. It must contain at least 12 characters.                       |
+| `SETUP_USER_NAME`        | `setup-user.mjs`       | First deployment only | Name for the first Organizer.                                                                   |
+| `SEED_ORGANIZER_EMAIL`   | `db:seed`              | Local demo setup      | Email address of the Organizer who owns the demo Meeting.                                       |
+| `SEED_ORGANIZER_USER_ID` | `db:seed`              | Local demo setup      | User ID of the Organizer who owns the demo Meeting. Use this instead of `SEED_ORGANIZER_EMAIL`. |
 
 The Dockerfile also sets `NODE_ENV`, `HOST`, `PORT`, `PROTOCOL_HEADER`, and `HOST_HEADER` in the production image. You normally do not need to override them.
