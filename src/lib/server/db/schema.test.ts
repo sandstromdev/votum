@@ -395,6 +395,37 @@ describe('whole Meeting voting PostgreSQL model', () => {
 	});
 
 	describe('Ballot', () => {
+		it('enforces one initial submission key per Meeting', async () => {
+			await expectSqlState(
+				db.transaction(async (tx) => {
+					const organizerUserId = await insertOrganizer(tx);
+					const meetingId = await insertMeeting(tx, organizerUserId);
+					const voteId = await insertVote(tx, meetingId);
+					const initialSubmissionKeyHash = randomUUID();
+
+					await tx.insert(participantToken).values({
+						id: uuidv7(),
+						meetingId,
+						tokenHash: randomUUID(),
+						initialSubmissionKeyHash,
+						initialSubmissionVoteId: voteId,
+						initialSubmissionPayloadHash: randomUUID(),
+						initialSubmissionTokenCiphertext: 'encrypted-token'
+					});
+					await tx.insert(participantToken).values({
+						id: uuidv7(),
+						meetingId,
+						tokenHash: randomUUID(),
+						initialSubmissionKeyHash,
+						initialSubmissionVoteId: voteId,
+						initialSubmissionPayloadHash: randomUUID(),
+						initialSubmissionTokenCiphertext: 'encrypted-token'
+					});
+				}),
+				UNIQUE_VIOLATION
+			);
+		});
+
 		it('rejects a second current Ballot for the same Participant token and Vote', async () => {
 			await expectSqlState(
 				db.transaction(async (tx) => {

@@ -8,23 +8,25 @@ import type { VoteKind } from '#lib/vote/agenda.js';
 import type { DecisionBallotChoice } from '#lib/vote/ballot.js';
 import { and, eq, inArray } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
-import { createParticipantToken, hashParticipantToken } from './identity.js';
+import {
+	createParticipantToken,
+	decryptParticipantToken,
+	encryptParticipantToken,
+	hashInitialSubmissionKey,
+	hashInitialSubmissionPayload,
+	hashParticipantToken
+} from './identity.js';
 import { advanceMeetingRevision, upsertCurrentBallot } from './persistence.js';
 import { resolveParticipantToken } from './token-resolution.js';
 import type { BallotTransaction } from './types.js';
-
-export class StaleActiveVoteError extends Error {
-	constructor() {
-		super('The submitted Vote is not the current Active Vote.');
-		this.name = 'StaleActiveVoteError';
-	}
-}
+import { BallotError } from '#lib/server/ballot/error.js';
 
 type DecisionBallotCommand = {
 	publicLocator: string;
 	activeVoteKey: string;
 	choice: DecisionBallotChoice;
 	rawParticipantToken?: string;
+	initialSubmissionKey?: string;
 };
 
 type WithdrawDecisionBallotCommand = {
@@ -39,6 +41,7 @@ type SelectionBallotCommand = {
 	vacancyCount: number;
 	abstain: boolean;
 	rawParticipantToken?: string;
+	initialSubmissionKey?: string;
 };
 
 type WithdrawBallotCommand = {
@@ -47,29 +50,39 @@ type WithdrawBallotCommand = {
 	kind: VoteKind;
 };
 
-async function lockActiveVote(tx: BallotTransaction, publicLocator: string) {
-	const [openMeeting] = await tx
-		.select({ id: meeting.id })
+type InitialSubmissionRecord = {
+	id: string;
+	tokenHash: string;
+	initialSubmissionVoteId: string | null;
+	initialSubmissionPayloadHash: string | null;
+	initialSubmissionTokenCiphertext: string | null;
+};
+
+async function lockMeeting(tx: BallotTransaction, publicLocator: string) {
+	const [lockedMeeting] = await tx
+		.select({ id: meeting.id, lifecycle: meeting.lifecycle })
 		.from(meeting)
-		.where(and(eq(meeting.publicLocator, publicLocator), eq(meeting.lifecycle, 'open')))
+		.where(eq(meeting.publicLocator, publicLocator))
 		.for('update')
 		.limit(1);
-	if (!openMeeting) return null;
+	return lockedMeeting ?? null;
+}
 
+async function lockActiveVote(tx: BallotTransaction, meetingId: string) {
 	const [activeVote] = await tx
 		.select({ id: vote.id, kind: vote.kind })
 		.from(vote)
-		.where(and(eq(vote.meetingId, openMeeting.id), eq(vote.lifecycle, 'open')))
+		.where(and(eq(vote.meetingId, meetingId), eq(vote.lifecycle, 'open')))
 		.for('update')
 		.limit(1);
 	if (!activeVote) return null;
 
-	return { meetingId: openMeeting.id, voteId: activeVote.id, kind: activeVote.kind };
+	return { meetingId, voteId: activeVote.id, kind: activeVote.kind };
 }
 
 function rejectStaleActiveVote(voteId: string, submittedActiveVoteKey: string) {
 	if (createActiveVoteKey(voteId) !== submittedActiveVoteKey) {
-		throw new StaleActiveVoteError();
+		throw new BallotError('stale_active_vote');
 	}
 }
 
@@ -77,7 +90,9 @@ async function ensureParticipantToken(
 	tx: BallotTransaction,
 	meetingId: string,
 	voteId: string,
-	rawParticipantToken: string | undefined
+	rawParticipantToken: string | undefined,
+	initialSubmissionKey: string | undefined,
+	initialSubmissionPayload: unknown
 ) {
 	// A missing, stale, or cross-meeting cookie gets a new token. Keep the old token and ballot because
 	// a lost participant token cannot be recovered.
@@ -87,7 +102,61 @@ async function ensureParticipantToken(
 		rawParticipantToken,
 		operation: 'submit'
 	});
-	if (existing) return { id: existing.id, createdToken: null };
+	if (existing) return { id: existing.id, createdToken: null, replayed: false };
+	if (!initialSubmissionKey) {
+		if (rawParticipantToken) {
+			const createdToken = createParticipantToken();
+			const [created] = await tx
+				.insert(participantToken)
+				.values({
+					id: uuidv7(),
+					meetingId,
+					tokenHash: hashParticipantToken(createdToken)
+				})
+				.returning({ id: participantToken.id });
+			return { id: created.id, createdToken, replayed: false };
+		}
+
+		throw new BallotError('initial_submission_key_required');
+	}
+
+	const initialSubmissionKeyHash = hashInitialSubmissionKey(initialSubmissionKey);
+	const initialSubmissionPayloadHash = hashInitialSubmissionPayload(initialSubmissionPayload);
+	const [replayed] = await tx
+		.select({
+			id: participantToken.id,
+			tokenHash: participantToken.tokenHash,
+			initialSubmissionVoteId: participantToken.initialSubmissionVoteId,
+			initialSubmissionPayloadHash: participantToken.initialSubmissionPayloadHash,
+			initialSubmissionTokenCiphertext: participantToken.initialSubmissionTokenCiphertext
+		})
+		.from(participantToken)
+		.where(
+			and(
+				eq(participantToken.meetingId, meetingId),
+				eq(participantToken.initialSubmissionKeyHash, initialSubmissionKeyHash)
+			)
+		)
+		.for('update')
+		.limit(1);
+
+	if (replayed) {
+		if (
+			replayed.initialSubmissionVoteId !== voteId ||
+			replayed.initialSubmissionPayloadHash !== initialSubmissionPayloadHash
+		) {
+			throw new BallotError('initial_submission_conflict');
+		}
+		if (!replayed.initialSubmissionTokenCiphertext) {
+			throw new Error('Initial submission token recovery data is missing.');
+		}
+
+		const replayedToken = decryptParticipantToken(replayed.initialSubmissionTokenCiphertext);
+		if (hashParticipantToken(replayedToken) !== replayed.tokenHash) {
+			throw new Error('Initial submission token recovery failed verification.');
+		}
+		return { id: replayed.id, createdToken: replayedToken, replayed: true };
+	}
 
 	const createdToken = createParticipantToken();
 
@@ -96,17 +165,120 @@ async function ensureParticipantToken(
 		.values({
 			id: uuidv7(),
 			meetingId,
-			tokenHash: hashParticipantToken(createdToken)
+			tokenHash: hashParticipantToken(createdToken),
+			initialSubmissionKeyHash,
+			initialSubmissionVoteId: voteId,
+			initialSubmissionPayloadHash,
+			initialSubmissionTokenCiphertext: encryptParticipantToken(createdToken)
 		})
 		.returning({ id: participantToken.id });
 
-	return { id: created.id, createdToken };
+	return { id: created.id, createdToken, replayed: false };
+}
+
+async function readInitialSubmission(
+	tx: BallotTransaction,
+	meetingId: string,
+	initialSubmissionKey: string | undefined
+) {
+	if (!initialSubmissionKey) return null;
+
+	const [record] = await tx
+		.select({
+			id: participantToken.id,
+			tokenHash: participantToken.tokenHash,
+			initialSubmissionVoteId: participantToken.initialSubmissionVoteId,
+			initialSubmissionPayloadHash: participantToken.initialSubmissionPayloadHash,
+			initialSubmissionTokenCiphertext: participantToken.initialSubmissionTokenCiphertext
+		})
+		.from(participantToken)
+		.where(
+			and(
+				eq(participantToken.meetingId, meetingId),
+				eq(
+					participantToken.initialSubmissionKeyHash,
+					hashInitialSubmissionKey(initialSubmissionKey)
+				)
+			)
+		)
+		.limit(1);
+
+	return record ?? null;
+}
+
+async function replayInitialSubmission(
+	tx: BallotTransaction,
+	record: InitialSubmissionRecord,
+	activeVoteKey: string,
+	initialSubmissionPayload: unknown
+) {
+	const voteId = record.initialSubmissionVoteId;
+	if (!voteId) {
+		throw new Error('Initial submission Vote ID is missing.');
+	}
+	if (
+		record.initialSubmissionPayloadHash !==
+			hashInitialSubmissionPayload(initialSubmissionPayload) ||
+		createActiveVoteKey(voteId) !== activeVoteKey
+	) {
+		throw new BallotError('initial_submission_conflict');
+	}
+	if (!record.initialSubmissionTokenCiphertext) {
+		throw new Error('Initial submission token recovery data is missing.');
+	}
+
+	const [lockedRecord] = await tx
+		.select({
+			id: participantToken.id,
+			tokenHash: participantToken.tokenHash,
+			initialSubmissionTokenCiphertext: participantToken.initialSubmissionTokenCiphertext
+		})
+		.from(participantToken)
+		.where(eq(participantToken.id, record.id))
+		.for('update')
+		.limit(1);
+	if (!lockedRecord?.initialSubmissionTokenCiphertext) {
+		throw new Error('Initial submission token recovery data is missing.');
+	}
+
+	const replayedToken = decryptParticipantToken(lockedRecord.initialSubmissionTokenCiphertext);
+	if (hashParticipantToken(replayedToken) !== lockedRecord.tokenHash) {
+		throw new Error('Initial submission token recovery failed verification.');
+	}
+	return { id: lockedRecord.id, createdToken: replayedToken, replayed: true };
 }
 
 export async function submitDecisionBallot(input: DecisionBallotCommand) {
 	// Lock the meeting before the vote so ballot writes cannot overlap Close or End.
 	const committed = await db.transaction(async (tx) => {
-		const activeVote = await lockActiveVote(tx, input.publicLocator);
+		const lockedMeeting = await lockMeeting(tx, input.publicLocator);
+		if (!lockedMeeting) return null;
+
+		const initialSubmissionPayload = { type: 'decision' as const, choice: input.choice };
+		const initialSubmission = input.rawParticipantToken
+			? null
+			: await readInitialSubmission(tx, lockedMeeting.id, input.initialSubmissionKey);
+		const activeVote =
+			lockedMeeting.lifecycle === 'open' ? await lockActiveVote(tx, lockedMeeting.id) : null;
+
+		if (initialSubmission) {
+			return {
+				value: {
+					changed: true,
+					createdToken: (
+						await replayInitialSubmission(
+							tx,
+							initialSubmission,
+							input.activeVoteKey,
+							initialSubmissionPayload
+						)
+					).createdToken
+				},
+				meetingId: lockedMeeting.id,
+				revision: null
+			};
+		}
+
 		if (!activeVote) return null;
 		// Reject a stale form before creating a token or writing a ballot.
 		rejectStaleActiveVote(activeVote.voteId, input.activeVoteKey);
@@ -116,20 +288,24 @@ export async function submitDecisionBallot(input: DecisionBallotCommand) {
 			tx,
 			activeVote.meetingId,
 			activeVote.voteId,
-			input.rawParticipantToken
+			input.rawParticipantToken,
+			input.initialSubmissionKey,
+			initialSubmissionPayload
 		);
 
-		const changed = await upsertCurrentBallot(tx, {
-			meetingId: activeVote.meetingId,
-			voteId: activeVote.voteId,
-			participantTokenId: token.id,
-			payload: { type: 'decision', choice: input.choice }
-		});
-
-		const revision = changed ? await advanceMeetingRevision(tx, activeVote.meetingId) : null;
+		const persistence = token.replayed
+			? null
+			: await upsertCurrentBallot(tx, {
+					meetingId: activeVote.meetingId,
+					voteId: activeVote.voteId,
+					participantTokenId: token.id,
+					payload: { type: 'decision', choice: input.choice }
+				});
+		const stateChanged = !token.replayed && persistence?.kind !== 'unchanged';
+		const revision = stateChanged ? await advanceMeetingRevision(tx, activeVote.meetingId) : null;
 
 		return {
-			value: { changed: true, createdToken: token.createdToken },
+			value: { changed: token.replayed || stateChanged, createdToken: token.createdToken },
 			meetingId: activeVote.meetingId,
 			revision
 		};
@@ -145,7 +321,39 @@ export async function submitDecisionBallot(input: DecisionBallotCommand) {
 export async function submitSelectionBallot(input: SelectionBallotCommand) {
 	// Read the configuration after locking the active vote so validation and the write share the Close boundary.
 	const committed = await db.transaction(async (tx) => {
-		const activeVote = await lockActiveVote(tx, input.publicLocator);
+		const lockedMeeting = await lockMeeting(tx, input.publicLocator);
+		if (!lockedMeeting) return null;
+
+		const initialSubmissionPayload = {
+			type: 'selection' as const,
+			selectedOptionIds: input.selectedOptionIds,
+			vacancyCount: input.vacancyCount,
+			abstain: input.abstain
+		};
+		const initialSubmission = input.rawParticipantToken
+			? null
+			: await readInitialSubmission(tx, lockedMeeting.id, input.initialSubmissionKey);
+		const activeVote =
+			lockedMeeting.lifecycle === 'open' ? await lockActiveVote(tx, lockedMeeting.id) : null;
+
+		if (initialSubmission) {
+			return {
+				value: {
+					changed: true,
+					createdToken: (
+						await replayInitialSubmission(
+							tx,
+							initialSubmission,
+							input.activeVoteKey,
+							initialSubmissionPayload
+						)
+					).createdToken
+				},
+				meetingId: lockedMeeting.id,
+				revision: null
+			};
+		}
+
 		if (!activeVote) return null;
 		rejectStaleActiveVote(activeVote.voteId, input.activeVoteKey);
 		if (activeVote.kind !== 'selection') return null;
@@ -161,10 +369,8 @@ export async function submitSelectionBallot(input: SelectionBallotCommand) {
 
 		if (!configuration) return null;
 
-		let ownedOptions: Array<{ id: string }> = [];
-
 		if (input.selectedOptionIds.length > 0) {
-			ownedOptions = await tx
+			const ownedOptions = await tx
 				.select({ id: selectionOption.id })
 				.from(selectionOption)
 				.where(
@@ -185,28 +391,28 @@ export async function submitSelectionBallot(input: SelectionBallotCommand) {
 			throw new Error('This Selection Vote does not allow Vacancy.');
 		}
 
+		const payload = initialSubmissionPayload;
 		const token = await ensureParticipantToken(
 			tx,
 			activeVote.meetingId,
 			activeVote.voteId,
-			input.rawParticipantToken
-		);
-		const payload = {
-			type: 'selection' as const,
-			selectedOptionIds: ownedOptions.map(({ id }) => id),
-			vacancyCount: input.vacancyCount,
-			abstain: input.abstain
-		};
-		const changed = await upsertCurrentBallot(tx, {
-			meetingId: activeVote.meetingId,
-			voteId: activeVote.voteId,
-			participantTokenId: token.id,
+			input.rawParticipantToken,
+			input.initialSubmissionKey,
 			payload
-		});
-		const revision = changed ? await advanceMeetingRevision(tx, activeVote.meetingId) : null;
+		);
+		const persistence = token.replayed
+			? null
+			: await upsertCurrentBallot(tx, {
+					meetingId: activeVote.meetingId,
+					voteId: activeVote.voteId,
+					participantTokenId: token.id,
+					payload
+				});
+		const stateChanged = !token.replayed && persistence?.kind !== 'unchanged';
+		const revision = stateChanged ? await advanceMeetingRevision(tx, activeVote.meetingId) : null;
 
 		return {
-			value: { changed: true, createdToken: token.createdToken },
+			value: { changed: token.replayed || stateChanged, createdToken: token.createdToken },
 			meetingId: activeVote.meetingId,
 			revision
 		};
@@ -222,7 +428,9 @@ export async function submitSelectionBallot(input: SelectionBallotCommand) {
 async function withdrawBallot({ publicLocator, rawParticipantToken, kind }: WithdrawBallotCommand) {
 	// Use the submission lock order so withdrawal cannot race a lifecycle transition.
 	const committed = await db.transaction(async (tx) => {
-		const activeVote = await lockActiveVote(tx, publicLocator);
+		const lockedMeeting = await lockMeeting(tx, publicLocator);
+		const activeVote =
+			lockedMeeting?.lifecycle === 'open' ? await lockActiveVote(tx, lockedMeeting.id) : null;
 		if (!activeVote || activeVote.kind !== kind) return null;
 		if (!rawParticipantToken) {
 			return { value: { changed: false }, meetingId: activeVote.meetingId, revision: null };

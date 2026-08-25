@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { addDraftVote } from '#lib/server/agenda/index.js';
 import {
@@ -15,7 +16,7 @@ import {
 	submitSelectionBallot,
 	withdrawDecisionBallot,
 	withdrawSelectionBallot,
-	StaleActiveVoteError
+	isBallotError
 } from '#lib/server/ballot/index.js';
 import { createServerTestContext } from '#lib/server/testing/database.js';
 
@@ -48,15 +49,27 @@ describe('Vote Ballots', () => {
 		return activeVoteKey;
 	}
 
+	function readBallotRows(meetingId: string) {
+		return context.sql`
+			SELECT id, payload, created_at, updated_at
+			FROM ballot
+			WHERE meeting_id = ${meetingId}
+			ORDER BY id
+		`;
+	}
+
 	async function decisionBallot(input: {
 		publicLocator: string;
 		choice: 'support' | 'oppose' | 'abstention';
 		rawParticipantToken?: string;
+		initialSubmissionKey?: string;
 		activeVoteKey?: string;
 	}) {
 		return submitDecisionBallot({
 			...input,
-			activeVoteKey: input.activeVoteKey ?? (await currentActiveVoteKey(input.publicLocator))
+			activeVoteKey: input.activeVoteKey ?? (await currentActiveVoteKey(input.publicLocator)),
+			initialSubmissionKey:
+				input.initialSubmissionKey ?? (input.rawParticipantToken ? undefined : randomUUID())
 		});
 	}
 
@@ -66,11 +79,14 @@ describe('Vote Ballots', () => {
 		vacancyCount: number;
 		abstain: boolean;
 		rawParticipantToken?: string;
+		initialSubmissionKey?: string;
 		activeVoteKey?: string;
 	}) {
 		return submitSelectionBallot({
 			...input,
-			activeVoteKey: input.activeVoteKey ?? (await currentActiveVoteKey(input.publicLocator))
+			activeVoteKey: input.activeVoteKey ?? (await currentActiveVoteKey(input.publicLocator)),
+			initialSubmissionKey:
+				input.initialSubmissionKey ?? (input.rawParticipantToken ? undefined : randomUUID())
 		});
 	}
 
@@ -159,6 +175,429 @@ describe('Vote Ballots', () => {
 		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
 			state: 'active',
 			participation: { current: 1, expected: 12 }
+		});
+	});
+
+	it('does not churn an unchanged Decision Ballot and still advances real changes once', async () => {
+		const { meeting } = await createActiveDecisionVote();
+		const first = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'support'
+		});
+		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		const beforeRows = await readBallotRows(meeting.id);
+		const beforeRevision = await context.getMeetingRevision(meeting.id);
+		const [retry, concurrentRetry] = await Promise.all([
+			decisionBallot({
+				publicLocator: meeting.publicLocator,
+				choice: 'support',
+				rawParticipantToken: first.createdToken
+			}),
+			decisionBallot({
+				publicLocator: meeting.publicLocator,
+				choice: 'support',
+				rawParticipantToken: first.createdToken
+			})
+		]);
+
+		expect(retry).toEqual({ changed: false, createdToken: null });
+		expect(concurrentRetry).toEqual({ changed: false, createdToken: null });
+		expect(await readBallotRows(meeting.id)).toEqual(beforeRows);
+		expect(await context.getMeetingRevision(meeting.id)).toBe(beforeRevision);
+		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
+			participation: { current: 1, expected: 12 },
+			revision: beforeRevision
+		});
+
+		expect(
+			await decisionBallot({
+				publicLocator: meeting.publicLocator,
+				choice: 'oppose',
+				rawParticipantToken: first.createdToken
+			})
+		).toEqual({ changed: true, createdToken: null });
+		expect(await context.getMeetingRevision(meeting.id)).toBe(beforeRevision + 1);
+
+		expect(
+			await withdrawDecisionBallot({
+				publicLocator: meeting.publicLocator,
+				rawParticipantToken: first.createdToken
+			})
+		).toEqual({ changed: true });
+		expect(await context.getMeetingRevision(meeting.id)).toBe(beforeRevision + 2);
+	});
+
+	it('does not churn an unchanged single-winner Selection Ballot', async () => {
+		const { meeting, vote } = await createActiveSelectionVote();
+		const optionId = vote.selection.options[0]?.id;
+		if (!optionId) throw new Error('Expected a Selection option');
+
+		const first = await selectionBallot({
+			publicLocator: meeting.publicLocator,
+			selectedOptionIds: [optionId],
+			vacancyCount: 0,
+			abstain: false
+		});
+		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		const beforeRows = await readBallotRows(meeting.id);
+		const beforeRevision = await context.getMeetingRevision(meeting.id);
+		const retry = await selectionBallot({
+			publicLocator: meeting.publicLocator,
+			selectedOptionIds: [optionId],
+			vacancyCount: 0,
+			abstain: false,
+			rawParticipantToken: first.createdToken
+		});
+
+		expect(retry).toEqual({ changed: false, createdToken: null });
+		expect(await readBallotRows(meeting.id)).toEqual(beforeRows);
+		expect(await context.getMeetingRevision(meeting.id)).toBe(beforeRevision);
+		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
+			participation: { current: 1, expected: 12 },
+			revision: beforeRevision
+		});
+	});
+
+	it('does not churn an unchanged multi-winner Selection Ballot', async () => {
+		const { meeting, vote } = await createActiveSelectionVote({ positionCount: 3 });
+		const selectedOptionIds = vote.selection.options.slice(0, 2).map(({ id }) => id);
+		if (selectedOptionIds.length !== 2) throw new Error('Expected two Selection options');
+
+		const first = await selectionBallot({
+			publicLocator: meeting.publicLocator,
+			selectedOptionIds,
+			vacancyCount: 1,
+			abstain: false
+		});
+		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		const beforeRows = await readBallotRows(meeting.id);
+		const beforeRevision = await context.getMeetingRevision(meeting.id);
+		const retry = await selectionBallot({
+			publicLocator: meeting.publicLocator,
+			selectedOptionIds: [...selectedOptionIds].reverse(),
+			vacancyCount: 1,
+			abstain: false,
+			rawParticipantToken: first.createdToken
+		});
+
+		expect(retry).toEqual({ changed: false, createdToken: null });
+		expect(await readBallotRows(meeting.id)).toEqual(beforeRows);
+		expect(await context.getMeetingRevision(meeting.id)).toBe(beforeRevision);
+		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
+			participation: { current: 1, expected: 12 },
+			revision: beforeRevision
+		});
+	});
+
+	it('replays an initial Decision Ballot with the same key and restores the token', async () => {
+		const { meeting } = await createActiveDecisionVote();
+		const initialSubmissionKey = randomUUID();
+		const first = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'support',
+			initialSubmissionKey
+		});
+		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		const replay = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'support',
+			initialSubmissionKey
+		});
+
+		expect(replay).toEqual({ changed: true, createdToken: first.createdToken });
+		expect(
+			await getParticipantPageProjection(meeting.publicLocator, replay?.createdToken ?? '')
+		).toMatchObject({ currentBallot: { type: 'decision', choice: 'support' } });
+		const rows = await context.sql`
+			SELECT count(*)::int AS token_count,
+				(SELECT count(*)::int FROM ballot WHERE meeting_id = ${meeting.id}) AS ballot_count,
+				initial_submission_key_hash,
+				initial_submission_token_ciphertext
+			FROM participant_token
+			WHERE meeting_id = ${meeting.id}
+			GROUP BY initial_submission_key_hash, initial_submission_token_ciphertext
+		`;
+		expect(rows).toHaveLength(1);
+		expect(rows[0]).toMatchObject({ token_count: 1, ballot_count: 1 });
+		expect(rows[0]?.initial_submission_key_hash).not.toBe(initialSubmissionKey);
+		expect(rows[0]?.initial_submission_token_ciphertext).not.toContain(first.createdToken);
+	});
+
+	it('replays an initial Selection Ballot with the same key and restores the token', async () => {
+		const { meeting, vote } = await createActiveSelectionVote({ positionCount: 2 });
+		const selectedOptionIds = vote.selection.options.slice(0, 2).map(({ id }) => id);
+		if (selectedOptionIds.length !== 2) throw new Error('Expected two Selection options');
+		const initialSubmissionKey = randomUUID();
+		const first = await selectionBallot({
+			publicLocator: meeting.publicLocator,
+			selectedOptionIds,
+			vacancyCount: 0,
+			abstain: false,
+			initialSubmissionKey
+		});
+		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		const replay = await selectionBallot({
+			publicLocator: meeting.publicLocator,
+			selectedOptionIds: [...selectedOptionIds].reverse(),
+			vacancyCount: 0,
+			abstain: false,
+			initialSubmissionKey
+		});
+
+		expect(replay).toEqual({ changed: true, createdToken: first.createdToken });
+		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
+			participation: { current: 1, expected: 12 }
+		});
+	});
+
+	it('requires an initial key only when no valid Participant token is available', async () => {
+		const { meeting } = await createActiveDecisionVote();
+		const activeVoteKey = currentActiveVoteKey(meeting.publicLocator);
+
+		await expect(
+			submitDecisionBallot({
+				publicLocator: meeting.publicLocator,
+				activeVoteKey,
+				choice: 'support'
+			})
+		).rejects.toSatisfy((e) => isBallotError(e, 'initial_submission_key_required'));
+
+		const first = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'support'
+		});
+		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		expect(
+			await submitDecisionBallot({
+				publicLocator: meeting.publicLocator,
+				activeVoteKey,
+				choice: 'support',
+				rawParticipantToken: first.createdToken
+			})
+		).toEqual({ changed: false, createdToken: null });
+	});
+
+	it('serializes concurrent same-key Decision Ballots into one Participant and Ballot', async () => {
+		const { meeting } = await createActiveDecisionVote();
+		const initialSubmissionKey = randomUUID();
+		const [first, second] = await Promise.all([
+			decisionBallot({
+				publicLocator: meeting.publicLocator,
+				choice: 'support',
+				initialSubmissionKey
+			}),
+			decisionBallot({
+				publicLocator: meeting.publicLocator,
+				choice: 'support',
+				initialSubmissionKey
+			})
+		]);
+
+		if (!first?.createdToken || !second?.createdToken) {
+			throw new Error('Expected both concurrent retries to recover the Participant token');
+		}
+		expect(second.createdToken).toBe(first.createdToken);
+		const rows = await context.sql`
+			SELECT
+				(SELECT count(*)::int FROM participant_token WHERE meeting_id = ${meeting.id}) AS token_count,
+				(SELECT count(*)::int FROM ballot WHERE meeting_id = ${meeting.id}) AS ballot_count
+		`;
+		expect(rows[0]).toEqual({ token_count: 1, ballot_count: 1 });
+	});
+
+	it('serializes concurrent same-key Selection Ballots into one Participant and Ballot', async () => {
+		const { meeting, vote } = await createActiveSelectionVote({ positionCount: 2 });
+		const optionId = vote.selection.options[0]?.id;
+		if (!optionId) throw new Error('Expected a Selection option');
+		const initialSubmissionKey = randomUUID();
+		const [first, second] = await Promise.all([
+			selectionBallot({
+				publicLocator: meeting.publicLocator,
+				selectedOptionIds: [optionId],
+				vacancyCount: 1,
+				abstain: false,
+				initialSubmissionKey
+			}),
+			selectionBallot({
+				publicLocator: meeting.publicLocator,
+				selectedOptionIds: [optionId],
+				vacancyCount: 1,
+				abstain: false,
+				initialSubmissionKey
+			})
+		]);
+
+		if (!first?.createdToken || !second?.createdToken) {
+			throw new Error('Expected both concurrent retries to recover the Participant token');
+		}
+		expect(second.createdToken).toBe(first.createdToken);
+		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
+			participation: { current: 1, expected: 12 }
+		});
+	});
+
+	it('recovers a committed cookie-less submission after Close without changing its Ballot', async () => {
+		const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
+		const activeVoteKey = currentActiveVoteKey(meeting.publicLocator);
+		const initialSubmissionKey = randomUUID();
+
+		const first = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'support',
+			activeVoteKey,
+			initialSubmissionKey
+		});
+		if (!first?.createdToken) throw new Error('Expected the initial Participant token');
+		const beforeCloseRows = await readBallotRows(meeting.id);
+
+		// The sequential await establishes the exact PostgreSQL commit boundary required by the
+		// cookie-less idempotency spec: the first submission is committed before Close begins.
+		const closed = await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
+		const revisionAfterClose = await context.getMeetingRevision(meeting.id);
+		const replay = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'support',
+			activeVoteKey,
+			initialSubmissionKey
+		});
+
+		expect(closed).toMatchObject({ lifecycle: 'open' });
+		expect(replay).toEqual({ changed: true, createdToken: first.createdToken });
+		expect(await readBallotRows(meeting.id)).toEqual(beforeCloseRows);
+		expect(await context.getMeetingRevision(meeting.id)).toBe(revisionAfterClose);
+		const [state] = await context.sql`
+			SELECT
+				(SELECT lifecycle FROM vote WHERE meeting_id = ${meeting.id}) AS vote_lifecycle,
+				(SELECT count(*)::int FROM participant_token WHERE meeting_id = ${meeting.id}) AS participant_count,
+				(SELECT count(*)::int FROM ballot WHERE meeting_id = ${meeting.id}) AS ballot_count,
+				(
+					SELECT (document->>'ballotCount')::int
+					FROM outcome_snapshot
+					WHERE meeting_id = ${meeting.id}
+				) AS snapshot_ballot_count
+		`;
+
+		expect(state?.vote_lifecycle).toBe('closed');
+		expect(state?.participant_count).toBe(1);
+		expect(state?.ballot_count).toBe(1);
+		expect(state?.snapshot_ballot_count).toBe(1);
+
+		await expect(
+			decisionBallot({
+				publicLocator: meeting.publicLocator,
+				choice: 'oppose',
+				activeVoteKey,
+				initialSubmissionKey
+			})
+		).rejects.toSatisfy((error) => isBallotError(error, 'initial_submission_conflict'));
+	});
+
+	it('lets Close win the commit boundary without creating a post-Close Participant or Ballot', async () => {
+		const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
+		const activeVoteKey = currentActiveVoteKey(meeting.publicLocator);
+		const initialSubmissionKey = randomUUID();
+
+		// Close commits first, so the later retry must observe the closed Meeting while holding the
+		// same Meeting lock used by submissions. This is the deterministic Close-wins boundary.
+		await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
+		const revisionAfterClose = await context.getMeetingRevision(meeting.id);
+		const retry = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'support',
+			activeVoteKey,
+			initialSubmissionKey
+		});
+
+		expect(retry).toBeNull();
+		expect(await context.getMeetingRevision(meeting.id)).toBe(revisionAfterClose);
+		const [state] = await context.sql`
+			SELECT
+				(SELECT count(*)::int FROM participant_token WHERE meeting_id = ${meeting.id}) AS participant_count,
+				(SELECT count(*)::int FROM ballot WHERE meeting_id = ${meeting.id}) AS ballot_count,
+				(SELECT (document->>'ballotCount')::int FROM outcome_snapshot WHERE meeting_id = ${meeting.id}) AS snapshot_ballot_count
+		`;
+		expect(state).toEqual({ participant_count: 0, ballot_count: 0, snapshot_ballot_count: 0 });
+	});
+
+	it('rejects a same-key Decision payload conflict without changing the Ballot', async () => {
+		const { meeting } = await createActiveDecisionVote();
+		const initialSubmissionKey = randomUUID();
+		const first = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'support',
+			initialSubmissionKey
+		});
+		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+		const revision = await context.getMeetingRevision(meeting.id);
+
+		await expect(
+			decisionBallot({
+				publicLocator: meeting.publicLocator,
+				choice: 'oppose',
+				initialSubmissionKey
+			})
+		).rejects.toSatisfy((e) => isBallotError(e, 'initial_submission_conflict'));
+
+		expect(await context.getMeetingRevision(meeting.id)).toBe(revision);
+		expect(
+			await getParticipantPageProjection(meeting.publicLocator, first.createdToken)
+		).toMatchObject({ currentBallot: { type: 'decision', choice: 'support' } });
+	});
+
+	it('keeps later Participant-token replacements independent from the initial key', async () => {
+		const { meeting } = await createActiveDecisionVote();
+		const initialSubmissionKey = randomUUID();
+		const first = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'support',
+			initialSubmissionKey
+		});
+		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'oppose',
+			rawParticipantToken: first.createdToken
+		});
+		const revision = await context.getMeetingRevision(meeting.id);
+		const replay = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'support',
+			initialSubmissionKey
+		});
+
+		expect(replay).toEqual({ changed: true, createdToken: first.createdToken });
+		expect(await context.getMeetingRevision(meeting.id)).toBe(revision);
+		expect(
+			await getParticipantPageProjection(meeting.publicLocator, first.createdToken)
+		).toMatchObject({ currentBallot: { type: 'decision', choice: 'oppose' } });
+	});
+
+	it('uses different initial keys for independent Participants', async () => {
+		const { meeting } = await createActiveDecisionVote();
+		const first = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'support',
+			initialSubmissionKey: randomUUID()
+		});
+		const second = await decisionBallot({
+			publicLocator: meeting.publicLocator,
+			choice: 'oppose',
+			initialSubmissionKey: randomUUID()
+		});
+		if (!first?.createdToken || !second?.createdToken) {
+			throw new Error('Expected independent Participant tokens to be created');
+		}
+
+		expect(second.createdToken).not.toBe(first.createdToken);
+		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
+			participation: { current: 2, expected: 12 }
 		});
 	});
 
@@ -286,6 +725,68 @@ describe('Vote Ballots', () => {
 		}
 	});
 
+	it('keeps concurrent reads with an unrecognized token successful and deduplicated', async () => {
+		const { meeting, vote } = await createActiveDecisionVote();
+		const rawParticipantToken = 'concurrent-unrecognized-token';
+
+		const projections = await Promise.all(
+			Array.from({ length: 32 }, () =>
+				getParticipantPageProjection(meeting.publicLocator, rawParticipantToken)
+			)
+		);
+
+		for (const projection of projections) {
+			expect(projection).toMatchObject({ state: 'active', currentBallot: null });
+		}
+
+		const diagnostics = await context.sql`
+			SELECT name, payload
+			FROM participant_token_anomaly
+			WHERE meeting_id = ${meeting.id} AND vote_id = ${vote.id}
+		`;
+		expect(diagnostics).toEqual([
+			{
+				name: 'participant_token_unrecognized',
+				payload: { operation: 'read', tokenState: 'unrecognized' }
+			}
+		]);
+		expect(JSON.stringify(diagnostics)).not.toContain(rawParticipantToken);
+	});
+
+	it('keeps concurrent reads with a wrong-Meeting token successful and deduplicated', async () => {
+		const source = await createActiveDecisionVote();
+		const sourceBallot = await decisionBallot({
+			publicLocator: source.meeting.publicLocator,
+			choice: 'support'
+		});
+		if (!sourceBallot?.createdToken) throw new Error('Expected a Participant token to be created');
+		const sourceToken = sourceBallot.createdToken;
+
+		const target = await createActiveDecisionVote();
+		const projections = await Promise.all(
+			Array.from({ length: 32 }, () =>
+				getParticipantPageProjection(target.meeting.publicLocator, sourceToken)
+			)
+		);
+
+		for (const projection of projections) {
+			expect(projection).toMatchObject({ state: 'active', currentBallot: null });
+		}
+
+		const diagnostics = await context.sql`
+			SELECT name, payload
+			FROM participant_token_anomaly
+			WHERE meeting_id = ${target.meeting.id} AND vote_id = ${target.vote.id}
+		`;
+		expect(diagnostics).toEqual([
+			{
+				name: 'participant_token_wrong_meeting',
+				payload: { operation: 'read', tokenState: 'wrong_meeting' }
+			}
+		]);
+		expect(JSON.stringify(diagnostics)).not.toContain(sourceBallot.createdToken);
+	});
+
 	it('allows an Organizer to close a Vote after a Participant submits a Ballot', async () => {
 		const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
 
@@ -409,6 +910,52 @@ describe('Vote Ballots', () => {
 
 		expect(closed).toMatchObject({ lifecycle: 'open' });
 		if (submission) expect(submission.changed).toBe(true);
+	});
+
+	it('bounds two same-key initial submissions racing with Close at one PostgreSQL snapshot', async () => {
+		const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
+		const activeVoteKey = await currentActiveVoteKey(meeting.publicLocator);
+		const initialSubmissionKey = randomUUID();
+
+		const [first, second, closed] = await Promise.all([
+			decisionBallot({
+				publicLocator: meeting.publicLocator,
+				choice: 'support',
+				activeVoteKey,
+				initialSubmissionKey
+			}),
+			decisionBallot({
+				publicLocator: meeting.publicLocator,
+				choice: 'support',
+				activeVoteKey,
+				initialSubmissionKey
+			}),
+			closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id })
+		]);
+
+		expect(closed).toMatchObject({ lifecycle: 'open' });
+		const [state] = await context.sql`
+			SELECT
+				(SELECT count(*)::int FROM participant_token WHERE meeting_id = ${meeting.id}) AS participant_count,
+				(SELECT count(*)::int FROM ballot WHERE meeting_id = ${meeting.id}) AS ballot_count,
+				(SELECT (document->>'ballotCount')::int FROM outcome_snapshot WHERE vote_id = ${vote.id}) AS snapshot_ballot_count
+		`;
+
+		expect(state?.participant_count).toBe(state?.ballot_count);
+		expect(state?.ballot_count).toBe(state?.snapshot_ballot_count);
+		expect([0, 1]).toContain(state?.snapshot_ballot_count);
+		if (state?.snapshot_ballot_count === 0) {
+			expect(first).toBeNull();
+			expect(second).toBeNull();
+		} else {
+			expect(state).toEqual({
+				participant_count: 1,
+				ballot_count: 1,
+				snapshot_ballot_count: 1
+			});
+			expect(first?.createdToken).toBeTruthy();
+			expect(second?.createdToken).toBe(first?.createdToken);
+		}
 	});
 
 	it('accepts a single-winner option, Abstention, and configured Vacancy', async () => {
@@ -686,7 +1233,7 @@ describe('Vote Ballots', () => {
 				choice: 'support',
 				activeVoteKey: staleActiveVoteKey
 			})
-		).rejects.toBeInstanceOf(StaleActiveVoteError);
+		).rejects.toSatisfy((e) => isBallotError(e, 'stale_active_vote'));
 
 		const after = await getParticipantProjection(meeting.publicLocator);
 		expect(after).toMatchObject({
@@ -779,7 +1326,7 @@ describe('Vote Ballots', () => {
 				abstain: false,
 				activeVoteKey: staleActiveVoteKey
 			})
-		).rejects.toBeInstanceOf(StaleActiveVoteError);
+		).rejects.toSatisfy((e) => isBallotError(e, 'stale_active_vote'));
 
 		const after = await getParticipantProjection(meeting.publicLocator);
 		expect(after).toMatchObject({

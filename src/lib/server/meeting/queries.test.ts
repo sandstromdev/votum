@@ -1,6 +1,9 @@
+import { randomUUID } from 'node:crypto';
+import { sql as drizzleSql } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { addDraftVote } from '#lib/server/agenda/index.js';
 import { submitDecisionBallot } from '#lib/server/ballot/index.js';
+import { db } from '#lib/server/db/index.js';
 import {
 	activateVote,
 	createDraftMeeting,
@@ -10,6 +13,10 @@ import {
 	getPresentationProjection,
 	openMeeting
 } from '#lib/server/meeting/index.js';
+import {
+	readOrganizerMeetingByLocator,
+	readOrganizerMeetings
+} from '#lib/server/meeting/queries.js';
 import { createServerTestContext } from '#lib/server/testing/database.js';
 
 const context = createServerTestContext();
@@ -117,7 +124,8 @@ describe('Meeting queries', () => {
 		await submitDecisionBallot({
 			publicLocator: created.publicLocator,
 			activeVoteKey: participant.activeVoteKey,
-			choice: 'support'
+			choice: 'support',
+			initialSubmissionKey: randomUUID()
 		});
 
 		expect(
@@ -126,6 +134,88 @@ describe('Meeting queries', () => {
 				publicLocator: created.publicLocator
 			})
 		).toMatchObject({ activeBallotCount: 1 });
+	});
+
+	it('reads individual and list Organizer projections from one repeatable-read snapshot', async () => {
+		const organizerUserId = await context.insertOrganizer();
+		const created = await createDraftMeeting({
+			organizerUserId,
+			title: 'Ögonblicksbild före ändring',
+			expectedParticipantCount: 12
+		});
+		context.trackMeetings(created.id);
+		const vote = await addDraftVote({
+			organizerUserId,
+			meetingId: created.id,
+			title: 'Fråga före ändring',
+			kind: 'decision',
+			supportLabel: 'För',
+			opposeLabel: 'Emot',
+			abstentionLabel: 'Avstår'
+		});
+		if (!vote) throw new Error('Expected the draft Vote to be created');
+
+		await openMeeting({ organizerUserId, meetingId: created.id });
+		await activateVote({ organizerUserId, meetingId: created.id, voteId: vote.id });
+		const before = await getOrganizerMeetingByLocator({
+			organizerUserId,
+			publicLocator: created.publicLocator
+		});
+		if (!before) throw new Error('Expected the Organizer projection to exist');
+
+		const participantTokenId = randomUUID();
+		const ballotId = randomUUID();
+		const after = await db.transaction(
+			async (tx) => {
+				// Establish the snapshot before a separate connection commits a lifecycle-adjacent change.
+				await tx.execute(drizzleSql`SELECT 1`);
+
+				await sql.begin(async (writer) => {
+					await writer`
+						INSERT INTO participant_token (id, meeting_id, token_hash)
+						VALUES (${participantTokenId}, ${created.id}, ${`snapshot-${participantTokenId}`})
+					`;
+					await writer`
+						INSERT INTO ballot (id, meeting_id, vote_id, participant_token_id, payload)
+						VALUES (
+							${ballotId},
+							${created.id},
+							${vote.id},
+							${participantTokenId},
+							${JSON.stringify({ type: 'decision', choice: 'support' })}::jsonb
+						)
+					`;
+					await writer`
+						UPDATE vote
+						SET title = 'Fråga efter ändring'
+						WHERE id = ${vote.id}
+					`;
+					await writer`
+						UPDATE meeting
+						SET title = 'Ögonblicksbild efter ändring', revision = revision + 1
+						WHERE id = ${created.id}
+					`;
+				});
+
+				const individual = await readOrganizerMeetingByLocator(tx, {
+					organizerUserId,
+					publicLocator: created.publicLocator
+				});
+				const list = await readOrganizerMeetings(tx, organizerUserId);
+				return { individual, listed: list.find(({ id }) => id === created.id) };
+			},
+			{ isolationLevel: 'repeatable read', accessMode: 'read only' }
+		);
+
+		for (const projection of [after.individual, after.listed]) {
+			expect(projection).toMatchObject({
+				id: created.id,
+				title: before.title,
+				revision: before.revision,
+				activeBallotCount: 0,
+				agenda: [expect.objectContaining({ title: vote.title })]
+			});
+		}
 	});
 
 	it('resolves the stable locator to a public projection without Organizer data', async () => {

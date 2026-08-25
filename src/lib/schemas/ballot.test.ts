@@ -1,13 +1,13 @@
 import { v7 as uuidv7 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { describe, expect, it } from 'vitest';
 import { submitDecisionBallotSchema, submitSelectionBallotSchema } from './ballot.js';
 
 describe('Ballot schemas', () => {
-	it('requires a choice when casting a Decision Ballot but not when withdrawing one', () => {
+	it('requires a choice when casting a Decision Ballot but not an initial key', () => {
 		expect(
 			submitDecisionBallotSchema.safeParse({ publicLocator: 'meeting-code', action: 'cast' })
 		).toMatchObject({ success: false });
-
 		expect(
 			submitDecisionBallotSchema.safeParse({
 				publicLocator: 'meeting-code',
@@ -16,6 +16,35 @@ describe('Ballot schemas', () => {
 				choice: 'support'
 			})
 		).toMatchObject({ success: true });
+		expect(
+			submitDecisionBallotSchema.safeParse({
+				publicLocator: 'meeting-code',
+				activeVoteKey: 'shown-vote',
+				action: 'cast',
+				choice: 'support',
+				initialSubmissionKey: ''
+			})
+		).toMatchObject({ success: true });
+
+		expect(
+			submitDecisionBallotSchema.safeParse({
+				publicLocator: 'meeting-code',
+				activeVoteKey: 'shown-vote',
+				action: 'cast',
+				choice: 'support',
+				initialSubmissionKey: uuidv4()
+			})
+		).toMatchObject({ success: true });
+
+		expect(
+			submitDecisionBallotSchema.safeParse({
+				publicLocator: 'meeting-code',
+				activeVoteKey: 'shown-vote',
+				action: 'cast',
+				choice: 'support',
+				initialSubmissionKey: 'malformed-key'
+			})
+		).toMatchObject({ success: false });
 
 		expect(
 			submitDecisionBallotSchema.safeParse({

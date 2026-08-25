@@ -4,6 +4,7 @@ import { selectionOption } from '#lib/server/db/schema/vote.js';
 import type { ParticipantBallot } from '#lib/vote/meeting.js';
 import { storedBallotPayloadSchema } from './payload.js';
 import { resolveParticipantToken } from './token-resolution.js';
+import type { ParticipantTokenAnomalyInput } from './diagnostics.js';
 import type { BallotTransaction } from './types.js';
 
 export async function readCurrentParticipantBallot(
@@ -11,11 +12,15 @@ export async function readCurrentParticipantBallot(
 	{
 		meetingId,
 		voteId,
-		rawParticipantToken
+		rawParticipantToken,
+		recordTokenAnomaly,
+		onTokenAnomaly
 	}: {
 		meetingId: string;
 		voteId: string;
 		rawParticipantToken?: string;
+		recordTokenAnomaly?: boolean;
+		onTokenAnomaly?: (input: ParticipantTokenAnomalyInput) => void;
 	}
 ): Promise<ParticipantBallot | null> {
 	// The caller supplies the locked open vote, so a token can only read its ballot for that vote.
@@ -23,7 +28,9 @@ export async function readCurrentParticipantBallot(
 		meetingId,
 		voteId,
 		rawParticipantToken,
-		operation: 'read'
+		operation: 'read',
+		recordTokenAnomaly,
+		onTokenAnomaly
 	});
 	if (!token) return null;
 

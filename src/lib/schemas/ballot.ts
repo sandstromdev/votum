@@ -3,11 +3,19 @@ import { DECISION_BALLOT_CHOICES } from '#lib/vote/ballot.js';
 import { publicLocatorSchema } from './meeting.js';
 
 const activeVoteKey = z.string().trim().min(1);
+const initialSubmissionKey = z
+	.union([z.uuidv4(), z.literal('')])
+	.optional()
+	.transform((value) => (value === '' ? undefined : value));
+
+export const INITIAL_SUBMISSION_KEY_REQUIRED_MESSAGE =
+	'En initialnyckel krävs när du lämnar in en röst.';
 
 export const submitDecisionBallotSchema = z
 	.object({
 		publicLocator: publicLocatorSchema,
 		activeVoteKey,
+		initialSubmissionKey,
 		choice: z.enum(DECISION_BALLOT_CHOICES).optional(),
 		action: z.enum(['cast', 'withdraw'])
 	})
@@ -25,6 +33,7 @@ export const submitSelectionBallotSchema = z
 	.object({
 		publicLocator: publicLocatorSchema,
 		activeVoteKey,
+		initialSubmissionKey,
 		selectedOptionIds: z.array(z.uuidv7()).default([]),
 		vacancyCount: z.number().int().nonnegative().default(0),
 		action: z.enum(['cast', 'withdraw']),

@@ -5,6 +5,25 @@ import { ballot } from '#lib/server/db/schema/participation.js';
 import type { StoredBallotPayload } from './payload.js';
 import type { BallotTransaction } from './types.js';
 
+export type BallotPersistenceResult =
+	{ kind: 'unchanged' } | { kind: 'inserted' } | { kind: 'replaced' };
+
+function equalStoredBallotPayload(left: StoredBallotPayload, right: StoredBallotPayload) {
+	if (left.type === 'decision' || right.type === 'decision') {
+		return left.type === 'decision' && right.type === 'decision' && left.choice === right.choice;
+	}
+
+	const leftOptionIds = new Set(left.selectedOptionIds);
+	const rightOptionIds = new Set(right.selectedOptionIds);
+
+	return (
+		left.vacancyCount === right.vacancyCount &&
+		left.abstain === right.abstain &&
+		leftOptionIds.size === rightOptionIds.size &&
+		[...leftOptionIds].every((id) => rightOptionIds.has(id))
+	);
+}
+
 export async function upsertCurrentBallot(
 	tx: BallotTransaction,
 	{
@@ -22,18 +41,20 @@ export async function upsertCurrentBallot(
 	// The caller locks the meeting and active vote first. Lock the ballot next so replacements use
 	// the same order and stay inside one transaction.
 	const [currentBallot] = await tx
-		.select({ id: ballot.id })
+		.select({ id: ballot.id, payload: ballot.payload })
 		.from(ballot)
 		.where(and(eq(ballot.voteId, voteId), eq(ballot.participantTokenId, participantTokenId)))
 		.for('update')
 		.limit(1);
 
 	if (currentBallot) {
+		if (equalStoredBallotPayload(currentBallot.payload, payload)) return { kind: 'unchanged' };
+
 		await tx
 			.update(ballot)
 			.set({ payload, updatedAt: new Date() })
 			.where(eq(ballot.id, currentBallot.id));
-		return true;
+		return { kind: 'replaced' };
 	}
 
 	await tx.insert(ballot).values({
@@ -43,7 +64,7 @@ export async function upsertCurrentBallot(
 		participantTokenId,
 		payload
 	});
-	return true;
+	return { kind: 'inserted' };
 }
 
 export async function advanceMeetingRevision(tx: BallotTransaction, meetingId: string) {
