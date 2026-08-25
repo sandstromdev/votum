@@ -17,6 +17,7 @@
 		"format": "prettier --cache --write .",
 		"test:unit": "vitest",
 		"test": "bun run test:unit -- --run",
+		"load-test": "bun run scripts/load-test.ts",
 		"test:coverage": "vitest run --project server --coverage",
 		"db:start": "docker compose up",
 		"db:push": "drizzle-kit push",
