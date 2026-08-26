@@ -23,7 +23,6 @@ import {
 } from '#lib/server/meeting/index.js';
 import { requireOrganizerSession } from '#lib/server/auth/session.js';
 import { getParticipantToken } from '#lib/server/participant-token.js';
-import { hashParticipantToken } from '#lib/server/ballot/identity.js';
 import {
 	liveMeetingSnapshots,
 	readOwnedMeetingIdByLocator
@@ -59,9 +58,7 @@ export const participantMeetingLive = query.live(
 			() => getParticipantPageProjection(publicLocator, rawParticipantToken),
 			event.request.signal,
 			undefined,
-			{
-				participantTokenHash: rawParticipantToken ? hashParticipantToken(rawParticipantToken) : null
-			}
+			{ ballotActivity: false }
 		);
 	}
 );
@@ -85,7 +82,9 @@ export const presentationMeetingLive = query.live(
 			meetingId,
 			() => getPresentationProjection(publicLocator),
 
-			event.request.signal
+			event.request.signal,
+			undefined,
+			{ ballotActivity: true }
 		);
 	}
 );
@@ -109,7 +108,8 @@ export const organizerMeetingLive = query.live(
 				return meeting;
 			},
 			event.request.signal,
-			createTimingContext()
+			createTimingContext(),
+			{ ballotActivity: true }
 		);
 	}
 );

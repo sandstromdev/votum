@@ -91,7 +91,8 @@ export async function invalidateVote({
 		return advanceMeetingAndRead(tx, meetingId);
 	});
 
-	if (committed) meetingPubSub.publish(meetingId, committed.revision);
+	if (committed)
+		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	return committed?.value ?? null;
 }
 
@@ -184,7 +185,8 @@ export async function rerunVote({
 		return advanceMeetingAndRead(tx, meetingId);
 	});
 
-	if (committed) meetingPubSub.publish(meetingId, committed.revision);
+	if (committed)
+		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	return committed?.value ?? null;
 }
 
@@ -258,6 +260,7 @@ export async function resolveIncompleteVote({
 		return advanceMeetingAndRead(tx, meetingId);
 	});
 
-	if (committed) meetingPubSub.publish(meetingId, committed.revision);
+	if (committed)
+		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	return committed?.value ?? null;
 }

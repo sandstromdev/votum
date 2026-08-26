@@ -350,11 +350,7 @@ export async function submitDecisionBallot(input: DecisionBallotCommand) {
 	);
 
 	if (committed?.ballotActivity) {
-		const participantToken = committed.value.createdToken ?? input.rawParticipantToken;
-		meetingPubSub.publishBallotActivity(committed.meetingId, {
-			participantTokenHash: participantToken ? hashParticipantToken(participantToken) : undefined,
-			timing
-		});
+		meetingPubSub.publish(committed.meetingId, { kind: 'ballot-activity' }, { timing });
 	}
 
 	return committed?.value ?? null;
@@ -464,11 +460,7 @@ export async function submitSelectionBallot(input: SelectionBallotCommand) {
 	);
 
 	if (committed?.ballotActivity) {
-		const participantToken = committed.value.createdToken ?? input.rawParticipantToken;
-		meetingPubSub.publishBallotActivity(committed.meetingId, {
-			participantTokenHash: participantToken ? hashParticipantToken(participantToken) : undefined,
-			timing
-		});
+		meetingPubSub.publish(committed.meetingId, { kind: 'ballot-activity' }, { timing });
 	}
 
 	return committed?.value ?? null;
@@ -527,12 +519,7 @@ async function withdrawBallot({
 	);
 
 	if (committed?.ballotActivity) {
-		meetingPubSub.publishBallotActivity(committed.meetingId, {
-			participantTokenHash: rawParticipantToken
-				? hashParticipantToken(rawParticipantToken)
-				: undefined,
-			timing
-		});
+		meetingPubSub.publish(committed.meetingId, { kind: 'ballot-activity' }, { timing });
 	}
 
 	return committed?.value ?? null;

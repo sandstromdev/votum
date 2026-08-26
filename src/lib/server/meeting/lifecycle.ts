@@ -98,7 +98,8 @@ export async function openMeeting({
 		} satisfies CommittedMeetingResult<ReturnType<typeof mapOrganizerMeeting>>;
 	});
 
-	if (committed) meetingPubSub.publish(meetingId, committed.revision);
+	if (committed)
+		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	return committed?.value ?? null;
 }
 
@@ -139,7 +140,8 @@ export async function activateVote({
 		return activateLockedVote(tx, meetingId, draftVote.id);
 	});
 
-	if (committed) meetingPubSub.publish(meetingId, committed.revision);
+	if (committed)
+		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	return committed?.value ?? null;
 }
 
@@ -180,7 +182,8 @@ export async function activateNextVote({
 		return activateLockedVote(tx, meetingId, nextVote.id);
 	});
 
-	if (committed) meetingPubSub.publish(meetingId, committed.revision);
+	if (committed)
+		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	return committed?.value ?? null;
 }
 
@@ -232,7 +235,8 @@ export async function closeVote({ organizerUserId, meetingId, voteId }: VoteLife
 		return advanceMeetingAndRead(tx, meetingId);
 	});
 
-	if (committed) meetingPubSub.publish(meetingId, committed.revision);
+	if (committed)
+		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	return committed?.value ?? null;
 }
 
@@ -282,7 +286,8 @@ export async function revealVote({ organizerUserId, meetingId, voteId }: VoteLif
 		return advanceMeetingAndRead(tx, meetingId);
 	});
 
-	if (committed) meetingPubSub.publish(meetingId, committed.revision);
+	if (committed)
+		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	return committed?.value ?? null;
 }
 
@@ -334,7 +339,7 @@ export async function setPublicResultBreakdown({
 	});
 
 	if (committed && committed.revision !== null) {
-		meetingPubSub.publish(meetingId, committed.revision);
+		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	}
 	return committed?.value ?? null;
 }
@@ -399,6 +404,7 @@ export async function endMeeting({
 		} satisfies CommittedMeetingResult<ReturnType<typeof mapOrganizerMeeting>>;
 	});
 
-	if (committed) meetingPubSub.publish(meetingId, committed.revision);
+	if (committed)
+		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	return committed?.value ?? null;
 }

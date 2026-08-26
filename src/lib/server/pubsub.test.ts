@@ -14,9 +14,9 @@ describe('MeetingPubSub', () => {
 
 			await Promise.resolve();
 
-			meetingPubSub.publish('meeting-1', 1);
-			meetingPubSub.publish('meeting-1', 3);
-			meetingPubSub.publish('meeting-1', 2);
+			meetingPubSub.publish('meeting-1', { kind: 'revision', revision: 1 });
+			meetingPubSub.publish('meeting-1', { kind: 'revision', revision: 3 });
+			meetingPubSub.publish('meeting-1', { kind: 'revision', revision: 2 });
 
 			await vi.runOnlyPendingTimersAsync();
 
@@ -24,8 +24,7 @@ describe('MeetingPubSub', () => {
 				value: {
 					kind: 'revision',
 					revision: 3,
-					ballotActivity: false,
-					participantTokenHashes: []
+					ballotActivity: false
 				},
 				done: false
 			});
@@ -41,18 +40,15 @@ describe('MeetingPubSub', () => {
 
 		try {
 			const controller = new AbortController();
-			const stream = meetingPubSub.listen('meeting-1', controller.signal);
+			const stream = meetingPubSub.listen('meeting-1', controller.signal, { ballotActivity: true });
 			const pending = stream.next();
 			const sourceTiming = createTimingContext();
 
 			await Promise.resolve();
 
-			meetingPubSub.publishBallotActivity('meeting-1', {
-				timing: sourceTiming,
-				participantTokenHash: 'token-a'
-			});
-			meetingPubSub.publish('meeting-1', 4);
-			meetingPubSub.publishBallotActivity('meeting-1');
+			meetingPubSub.publish('meeting-1', { kind: 'ballot-activity' }, { timing: sourceTiming });
+			meetingPubSub.publish('meeting-1', { kind: 'revision', revision: 4 });
+			meetingPubSub.publish('meeting-1', { kind: 'ballot-activity' });
 			await vi.runOnlyPendingTimersAsync();
 
 			expect(await pending).toEqual({
@@ -60,7 +56,6 @@ describe('MeetingPubSub', () => {
 					kind: 'revision',
 					revision: 4,
 					ballotActivity: true,
-					participantTokenHashes: ['token-a'],
 					sourceCorrelationId: sourceTiming.correlationId
 				},
 				done: false
@@ -72,43 +67,69 @@ describe('MeetingPubSub', () => {
 		}
 	});
 
-	it('routes ballot activity to organizers and the matching participant only', async () => {
+	it('routes ballot activity only to subscribers that opt in', async () => {
 		vi.useFakeTimers();
 
 		const organizer = vi.fn();
 		const participantA = vi.fn();
 		const participantB = vi.fn();
-		const participantWithoutToken = vi.fn();
-		const unsubscribeOrganizer = meetingPubSub.subscribe('meeting-routing', organizer);
+		const presentation = vi.fn();
+		const unsubscribeOrganizer = meetingPubSub.subscribe('meeting-routing', organizer, {
+			ballotActivity: true
+		});
+		const unsubscribePresentation = meetingPubSub.subscribe('meeting-routing', presentation, {
+			ballotActivity: true
+		});
 		const unsubscribeParticipantA = meetingPubSub.subscribe('meeting-routing', participantA, {
-			participantTokenHash: 'token-a'
+			ballotActivity: false
 		});
-		const unsubscribeParticipantB = meetingPubSub.subscribe('meeting-routing', participantB, {
-			participantTokenHash: 'token-b'
-		});
-		const unsubscribeParticipantWithoutToken = meetingPubSub.subscribe(
-			'meeting-routing',
-			participantWithoutToken,
-			{
-				participantTokenHash: null
-			}
-		);
+		const unsubscribeParticipantB = meetingPubSub.subscribe('meeting-routing', participantB);
 
 		try {
-			meetingPubSub.publishBallotActivity('meeting-routing', {
-				participantTokenHash: 'token-a'
-			});
+			meetingPubSub.publish('meeting-routing', { kind: 'ballot-activity' });
 			await vi.runOnlyPendingTimersAsync();
 
 			expect(organizer).toHaveBeenCalledOnce();
-			expect(participantA).toHaveBeenCalledOnce();
+			expect(presentation).toHaveBeenCalledOnce();
+			expect(participantA).not.toHaveBeenCalled();
 			expect(participantB).not.toHaveBeenCalled();
-			expect(participantWithoutToken).not.toHaveBeenCalled();
 		} finally {
 			unsubscribeOrganizer();
+			unsubscribePresentation();
 			unsubscribeParticipantA();
 			unsubscribeParticipantB();
-			unsubscribeParticipantWithoutToken();
+			vi.useRealTimers();
+		}
+	});
+
+	it('routes lifecycle revisions to participants regardless of ballot activity opt-in', async () => {
+		vi.useFakeTimers();
+
+		const organizer = vi.fn();
+		const presentation = vi.fn();
+		const participant = vi.fn();
+		const unsubscribeOrganizer = meetingPubSub.subscribe('meeting-lifecycle', organizer, {
+			ballotActivity: true
+		});
+		const unsubscribePresentation = meetingPubSub.subscribe('meeting-lifecycle', presentation, {
+			ballotActivity: true
+		});
+		const unsubscribeParticipant = meetingPubSub.subscribe('meeting-lifecycle', participant, {
+			ballotActivity: false
+		});
+
+		try {
+			meetingPubSub.publish('meeting-lifecycle', { kind: 'revision', revision: 2 });
+			await vi.runOnlyPendingTimersAsync();
+
+			const expected = { kind: 'revision', revision: 2, ballotActivity: false };
+			expect(organizer).toHaveBeenCalledWith(expected);
+			expect(presentation).toHaveBeenCalledWith(expected);
+			expect(participant).toHaveBeenCalledWith(expected);
+		} finally {
+			unsubscribeOrganizer();
+			unsubscribePresentation();
+			unsubscribeParticipant();
 			vi.useRealTimers();
 		}
 	});
@@ -143,25 +164,23 @@ describe('MeetingPubSub', () => {
 		vi.useFakeTimers();
 
 		try {
-			meetingPubSub.publish('meeting-3', 1);
+			meetingPubSub.publish('meeting-3', { kind: 'revision', revision: 1 });
 
 			await vi.runOnlyPendingTimersAsync();
 
-			meetingPubSub.publish('meeting-3', 2);
+			meetingPubSub.publish('meeting-3', { kind: 'revision', revision: 2 });
 
 			await vi.runOnlyPendingTimersAsync();
 
 			expect(handler).toHaveBeenCalledWith({
 				kind: 'revision',
 				revision: 1,
-				ballotActivity: false,
-				participantTokenHashes: []
+				ballotActivity: false
 			});
 			expect(handler).not.toHaveBeenCalledWith({
 				kind: 'revision',
 				revision: 2,
-				ballotActivity: false,
-				participantTokenHashes: []
+				ballotActivity: false
 			});
 			expect(handler).toHaveBeenCalledOnce();
 		} finally {
@@ -177,7 +196,7 @@ describe('MeetingPubSub', () => {
 		const unsub = meetingPubSub.subscribe('meeting-4', handler);
 
 		try {
-			meetingPubSub.publish('meeting-4', 1);
+			meetingPubSub.publish('meeting-4', { kind: 'revision', revision: 1 });
 
 			unsub();
 

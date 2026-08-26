@@ -9,22 +9,33 @@ import { VOTUM_LIVE_UPDATE_DEBOUNCE_MS } from '$app/env/private';
 type MeetingId = string;
 type SubscriberId = string;
 
+export type MeetingPublication =
+	| {
+			kind: 'revision';
+			revision: number;
+	  }
+	| {
+			kind: 'ballot-activity';
+	  };
+
 export type MeetingUpdate =
 	| {
 			kind: 'revision';
 			revision: number;
 			ballotActivity: boolean;
-			participantTokenHashes: readonly string[];
 			sourceCorrelationId?: string;
 	  }
 	| {
 			kind: 'ballot-activity';
-			participantTokenHashes: readonly string[];
 			sourceCorrelationId?: string;
 	  };
 
 export type MeetingSubscriptionOptions = {
-	participantTokenHash?: string | null;
+	ballotActivity?: boolean;
+};
+
+type MeetingPublishOptions = {
+	timing?: TimingContext;
 };
 
 type Subscriber = {
@@ -40,7 +51,6 @@ type PendingMap = Map<
 	{
 		revision: number | undefined;
 		ballotActivity: boolean;
-		participantTokenHashes: Set<string>;
 		sourceCorrelationId: string | undefined;
 		timer: NodeJS.Timeout;
 	}
@@ -86,14 +96,10 @@ class MeetingPubSub {
 	) {
 		let latestRevision: number | undefined;
 		let ballotActivity = false;
-		const participantTokenHashes = new Set<string>();
 		let sourceCorrelationId: string | undefined;
 		let resolveWait: (() => void) | undefined;
 
 		function onPayload(update: MeetingUpdate) {
-			for (const participantTokenHash of update.participantTokenHashes) {
-				participantTokenHashes.add(participantTokenHash);
-			}
 			if (update.kind === 'revision') {
 				latestRevision = Math.max(latestRevision ?? 0, update.revision);
 				ballotActivity ||= update.ballotActivity;
@@ -138,7 +144,6 @@ class MeetingPubSub {
 				if (latestRevision === undefined) {
 					yield {
 						kind: 'ballot-activity',
-						participantTokenHashes: [...participantTokenHashes],
 						...(sourceCorrelationId === undefined ? {} : { sourceCorrelationId })
 					};
 				} else {
@@ -146,13 +151,11 @@ class MeetingPubSub {
 						kind: 'revision',
 						revision: latestRevision,
 						ballotActivity,
-						participantTokenHashes: [...participantTokenHashes],
 						...(sourceCorrelationId === undefined ? {} : { sourceCorrelationId })
 					};
 				}
 				latestRevision = undefined;
 				ballotActivity = false;
-				participantTokenHashes.clear();
 				sourceCorrelationId = undefined;
 			}
 		} finally {
@@ -161,7 +164,7 @@ class MeetingPubSub {
 		}
 	}
 
-	#publish(meetingId: MeetingId, update: MeetingUpdate) {
+	#publish(meetingId: MeetingId, update: MeetingPublication & { sourceCorrelationId?: string }) {
 		const pending = this.#pending.get(meetingId);
 
 		if (pending) {
@@ -170,9 +173,6 @@ class MeetingPubSub {
 			}
 			if (update.kind === 'ballot-activity') {
 				pending.ballotActivity = true;
-			}
-			for (const participantTokenHash of update.participantTokenHashes) {
-				pending.participantTokenHashes.add(participantTokenHash);
 			}
 			if (update.sourceCorrelationId !== undefined) {
 				pending.sourceCorrelationId = update.sourceCorrelationId;
@@ -187,35 +187,27 @@ class MeetingPubSub {
 		this.#pending.set(meetingId, {
 			revision: update.kind === 'revision' ? update.revision : undefined,
 			ballotActivity: update.kind === 'ballot-activity',
-			participantTokenHashes: new Set(update.participantTokenHashes),
 			sourceCorrelationId: update.sourceCorrelationId,
 			timer
 		});
 	}
 
-	publish(meetingId: MeetingId, revision: number) {
-		this.#publish(meetingId, {
-			kind: 'revision',
-			revision,
-			ballotActivity: false,
-			participantTokenHashes: []
-		});
-	}
-
-	publishBallotActivity(
+	publish(
 		meetingId: MeetingId,
-		{
-			participantTokenHash,
-			timing: inputTiming
-		}: { participantTokenHash?: string; timing?: TimingContext } = {}
+		update: MeetingPublication,
+		{ timing: inputTiming }: MeetingPublishOptions = {}
 	) {
+		if (update.kind !== 'ballot-activity') {
+			this.#publish(meetingId, update);
+			return;
+		}
+
 		const timing = inputTiming ?? createTimingContext();
 		const sourceCorrelationId = inputTiming?.correlationId;
 		const startedAt = timingStart(timing, 'ballot.publishBallotActivity');
 		try {
 			this.#publish(meetingId, {
-				kind: 'ballot-activity',
-				participantTokenHashes: participantTokenHash === undefined ? [] : [participantTokenHash],
+				...update,
 				...(sourceCorrelationId === undefined ? {} : { sourceCorrelationId })
 			});
 			timingEnd(timing, 'ballot.publishBallotActivity', startedAt, 'success');
@@ -236,9 +228,7 @@ class MeetingPubSub {
 			return;
 		}
 
-		const { revision, ballotActivity, participantTokenHashes, sourceCorrelationId, timer } =
-			pending;
-		const participantTokenHashList = [...participantTokenHashes];
+		const { revision, ballotActivity, sourceCorrelationId, timer } = pending;
 
 		if (timer) {
 			clearTimeout(timer);
@@ -248,19 +238,12 @@ class MeetingPubSub {
 
 		for (const subscriber of [...channel.values()]) {
 			try {
-				const isTargetedParticipant = 'participantTokenHash' in subscriber.options;
-				const participantTokenHash = subscriber.options.participantTokenHash;
-				const receivesBallotActivity =
-					!isTargetedParticipant ||
-					(participantTokenHash !== null &&
-						participantTokenHash !== undefined &&
-						participantTokenHashes.has(participantTokenHash));
+				const receivesBallotActivity = subscriber.options.ballotActivity === true;
 				if (revision === undefined && !receivesBallotActivity) continue;
 
 				if (revision === undefined) {
 					subscriber.subscribeFn({
 						kind: 'ballot-activity',
-						participantTokenHashes: participantTokenHashList,
 						...(sourceCorrelationId === undefined ? {} : { sourceCorrelationId })
 					});
 				} else {
@@ -268,7 +251,6 @@ class MeetingPubSub {
 						kind: 'revision',
 						revision,
 						ballotActivity: ballotActivity && receivesBallotActivity,
-						participantTokenHashes: participantTokenHashList,
 						...(sourceCorrelationId === undefined ? {} : { sourceCorrelationId })
 					});
 				}

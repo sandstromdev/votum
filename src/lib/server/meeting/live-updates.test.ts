@@ -19,16 +19,16 @@ describe('live Meeting snapshots', () => {
 			expect(await stream.next()).toEqual({ value: { revision: 1 }, done: false });
 
 			revision = 3;
-			meetingPubSub.publish('meeting-1', 3);
+			meetingPubSub.publish('meeting-1', { kind: 'revision', revision: 3 });
 			await vi.runOnlyPendingTimersAsync();
 			expect(await stream.next()).toEqual({ value: { revision: 3 }, done: false });
 
 			revision = 2;
 			const pending = stream.next();
-			meetingPubSub.publish('meeting-1', 2);
+			meetingPubSub.publish('meeting-1', { kind: 'revision', revision: 2 });
 			await vi.runOnlyPendingTimersAsync();
 			revision = 4;
-			meetingPubSub.publish('meeting-1', 4);
+			meetingPubSub.publish('meeting-1', { kind: 'revision', revision: 4 });
 			await vi.runOnlyPendingTimersAsync();
 			expect(await pending).toEqual({ value: { revision: 4 }, done: false });
 
@@ -48,13 +48,15 @@ describe('live Meeting snapshots', () => {
 			const stream = liveMeetingSnapshots(
 				'meeting-1',
 				async () => ({ revision: 1, count }),
-				controller.signal
+				controller.signal,
+				undefined,
+				{ ballotActivity: true }
 			);
 
 			expect(await stream.next()).toEqual({ value: { revision: 1, count: 0 }, done: false });
 
 			count = 1;
-			meetingPubSub.publishBallotActivity('meeting-1', {});
+			meetingPubSub.publish('meeting-1', { kind: 'ballot-activity' });
 			await vi.runOnlyPendingTimersAsync();
 
 			expect(await stream.next()).toEqual({ value: { revision: 1, count: 1 }, done: false });
@@ -81,7 +83,8 @@ describe('live Meeting snapshots', () => {
 				'meeting-1',
 				async () => ({ revision: 1, count }),
 				controller.signal,
-				organizerTiming
+				organizerTiming,
+				{ ballotActivity: true }
 			);
 
 			expect(await stream.next()).toEqual({
@@ -90,7 +93,7 @@ describe('live Meeting snapshots', () => {
 			});
 
 			count = 1;
-			meetingPubSub.publishBallotActivity('meeting-1', { timing: sourceTiming });
+			meetingPubSub.publish('meeting-1', { kind: 'ballot-activity' }, { timing: sourceTiming });
 			await vi.runOnlyPendingTimersAsync();
 			expect(await stream.next()).toEqual({
 				value: { revision: 1, count: 1 },
@@ -114,30 +117,32 @@ describe('live Meeting snapshots', () => {
 		}
 	});
 
-	it('does not reread a participant snapshot for another participant’s ballot', async () => {
+	it('does not reread a participant snapshot for ballot activity', async () => {
 		vi.useFakeTimers();
 		const controller = new AbortController();
 		let reads = 0;
+		let revision = 1;
 
 		try {
 			const stream = liveMeetingSnapshots(
 				'meeting-1',
-				async () => ({ revision: 1, reads: ++reads }),
+				async () => ({ revision, reads: ++reads }),
 				controller.signal,
 				undefined,
-				{ participantTokenHash: 'token-a' }
+				{ ballotActivity: false }
 			);
 
 			expect(await stream.next()).toEqual({ value: { revision: 1, reads: 1 }, done: false });
 
 			const pending = stream.next();
-			meetingPubSub.publishBallotActivity('meeting-1', { participantTokenHash: 'token-b' });
+			meetingPubSub.publish('meeting-1', { kind: 'ballot-activity' });
 			await vi.runOnlyPendingTimersAsync();
 			expect(reads).toBe(1);
 
-			meetingPubSub.publishBallotActivity('meeting-1', { participantTokenHash: 'token-a' });
+			revision = 2;
+			meetingPubSub.publish('meeting-1', { kind: 'revision', revision: 2 });
 			await vi.runOnlyPendingTimersAsync();
-			expect(await pending).toEqual({ value: { revision: 1, reads: 2 }, done: false });
+			expect(await pending).toEqual({ value: { revision: 2, reads: 2 }, done: false });
 
 			controller.abort();
 			await stream.return(undefined);
@@ -173,7 +178,7 @@ describe('live Meeting snapshots', () => {
 			);
 
 			expect(await stream.next()).toEqual({ value: { revision: 1 }, done: false });
-			meetingPubSub.publish('meeting-2', 1);
+			meetingPubSub.publish('meeting-2', { kind: 'revision', revision: 1 });
 			await vi.runOnlyPendingTimersAsync();
 
 			const pending = stream.next();
@@ -184,7 +189,7 @@ describe('live Meeting snapshots', () => {
 			await Promise.resolve();
 			expect(completed).toBe(false);
 			revision = 2;
-			meetingPubSub.publish('meeting-1', 2);
+			meetingPubSub.publish('meeting-1', { kind: 'revision', revision: 2 });
 			await vi.runOnlyPendingTimersAsync();
 			await pending;
 

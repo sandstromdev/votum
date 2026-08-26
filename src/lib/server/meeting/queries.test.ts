@@ -169,7 +169,9 @@ describe('Meeting queries', () => {
 					organizerUserId,
 					publicLocator: created.publicLocator
 				}),
-			controller.signal
+			controller.signal,
+			undefined,
+			{ ballotActivity: true }
 		);
 
 		try {
