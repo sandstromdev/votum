@@ -4,18 +4,15 @@
 	import { Input } from '#lib/components/ui/input/index.js';
 	import { NativeSelect, NativeSelectOption } from '#lib/components/ui/native-select/index.js';
 	import type { DraftVoteInput } from '#lib/schemas/vote.js';
-	import { DEFAULT_MAJORITY_RULE } from '#lib/vote/majority.js';
+	import { DEFAULT_MAJORITY_RULE, majorityRequirement } from '#lib/vote/majority.js';
 	import type { RemoteFormFields } from '$app/server';
 
 	let { fields }: { fields: RemoteFormFields<DraftVoteInput> } = $props();
 
 	const uid = $props.id();
 	const majorityRule = $derived(fields.majorityRule.value() ?? DEFAULT_MAJORITY_RULE);
-	const majorityDescription = $derived(
-		majorityRule === 'qualified'
-			? 'Minst två tredjedelar ja mot nej. Avståenden räknas inte.'
-			: 'Fler för än emot. Avståenden räknas inte.'
-	);
+	const abstentionsCounted = $derived(fields.abstentionsCounted.value() ?? false);
+	const majorityDescription = $derived(majorityRequirement({ majorityRule, abstentionsCounted }));
 </script>
 
 <div class="grid gap-4">
@@ -46,10 +43,8 @@
 				}
 			}}
 		>
-			<NativeSelectOption value="simple">Enkel majoritet</NativeSelectOption>
-			<NativeSelectOption value="qualified"
-				>Kvalificerad majoritet (två tredjedelar)</NativeSelectOption
-			>
+			<NativeSelectOption value="simple">Fler röstar för än emot</NativeSelectOption>
+			<NativeSelectOption value="qualified">Minst två tredjedelar röstar för</NativeSelectOption>
 		</NativeSelect>
 		<FieldDescription>{majorityDescription}</FieldDescription>
 	</Field>
@@ -62,7 +57,7 @@
 			/>
 			<div class="grid gap-1">
 				<FieldLabel for={`count-abstentions-${uid}`}>Räkna avståenden</FieldLabel>
-				<FieldDescription>Då krävs två tredjedelar ja av alla röster.</FieldDescription>
+				<FieldDescription>Då räknas avståenden med bland rösterna.</FieldDescription>
 			</div>
 		</Field>
 	{/if}

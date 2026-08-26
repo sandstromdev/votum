@@ -96,14 +96,11 @@
 				>
 				<Button
 					type="button"
-					disabled={dialog.loading ||
-						(dialog.options?.inputType !== undefined && dialog.reason.trim() === '')}
+					disabled={dialog.options?.inputType !== undefined && dialog.reason.trim() === ''}
+					loading={dialog.loading}
 					onclick={() => void confirm()}>{options.confirmLabel ?? 'Bekräfta'}</Button
 				>
 			</AlertDialog.Footer>
-			{#if dialog.loading}
-				<p class="text-sm text-muted-foreground" role="status">Sparar</p>
-			{/if}
 		</AlertDialog.Content>
 	{/if}
 </AlertDialog.Root>

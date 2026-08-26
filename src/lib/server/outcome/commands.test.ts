@@ -332,7 +332,7 @@ describe('Vote outcomes', () => {
 						revealed: true,
 						final: {
 							state: testCase.state,
-							majorityLabel: 'Enkel majoritet',
+							majorityLabel: 'Fler röstar för än emot',
 							abstentionsCounted: false
 						}
 					}
@@ -342,7 +342,7 @@ describe('Vote outcomes', () => {
 						revealed: true,
 						final: {
 							state: testCase.state,
-							majorityLabel: 'Enkel majoritet',
+							majorityLabel: 'Fler röstar för än emot',
 							abstentionsCounted: false
 						}
 					}
@@ -375,7 +375,7 @@ describe('Vote outcomes', () => {
 					final: {
 						state: 'rejected',
 						winner: null,
-						majorityLabel: 'Kvalificerad majoritet, avståenden räknades',
+						majorityLabel: 'Minst två tredjedelar röstar för, avståenden räknas med',
 						abstentionsCounted: true
 					}
 				}
@@ -385,7 +385,7 @@ describe('Vote outcomes', () => {
 					revealed: true,
 					final: {
 						state: 'rejected',
-						majorityLabel: 'Kvalificerad majoritet, avståenden räknades',
+						majorityLabel: 'Minst två tredjedelar röstar för, avståenden räknas med',
 						abstentionsCounted: true
 					}
 				}

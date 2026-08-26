@@ -19,6 +19,7 @@
 	import { applyIncompleteResolution, outcomeLabel } from '#lib/vote/outcome.js';
 	import { refreshAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	let {
 		meeting
@@ -82,13 +83,16 @@
 			: Math.min(100, ((meeting.activeBallotCount ?? 0) / meeting.expectedParticipantCount) * 100)
 	);
 
+	const loading = new SvelteSet<string>();
+
 	async function run(
 		action: () => Promise<unknown>,
 		errorMessage: string,
-		{ rethrow = false }: { rethrow?: boolean } = {}
+		{ rethrow = false, id }: { rethrow?: boolean; id?: string } = {}
 	) {
 		if (busy) return;
 		busy = true;
+		if (id) loading.add(id);
 		try {
 			await action();
 			await refreshAll();
@@ -97,6 +101,7 @@
 			if (rethrow) throw error;
 		} finally {
 			busy = false;
+			if (id) loading.delete(id);
 		}
 	}
 
@@ -108,7 +113,8 @@
 					voteId: vote.id,
 					expectedRevision: meeting.revision
 				}),
-			'Omröstningen kunde inte aktiveras. Uppdatera sidan och försök igen.'
+			'Omröstningen kunde inte aktiveras. Uppdatera sidan och försök igen.',
+			{ id: 'activate-vote' }
 		);
 	}
 
@@ -120,7 +126,8 @@
 					meetingId: meeting.id,
 					voteId: activeVote.id
 				}),
-			'Omröstningen kunde inte stängas. Uppdatera sidan och försök igen.'
+			'Omröstningen kunde inte stängas. Uppdatera sidan och försök igen.',
+			{ id: 'close' }
 		);
 	}
 
@@ -132,7 +139,7 @@
 					expectedRevision: meeting.revision
 				}),
 			'Nästa omröstning kunde inte aktiveras. Uppdatera sidan och försök igen.',
-			{ rethrow: true }
+			{ rethrow: true, id: 'activate-next' }
 		);
 	}
 
@@ -160,7 +167,7 @@
 				run(
 					() => endMeeting({ meetingId: meeting.id, expectedRevision: meeting.revision }),
 					'Mötet kunde inte avslutas. Uppdatera sidan och försök igen.',
-					{ rethrow: true }
+					{ rethrow: true, id: 'end-meeting' }
 				)
 		});
 	}
@@ -174,7 +181,8 @@
 					voteId: latestClosedVote.id,
 					resolutionType
 				}),
-			'Det inkompletta resultatet kunde inte ändras. Uppdatera sidan och försök igen.'
+			'Det inkompletta resultatet kunde inte ändras. Uppdatera sidan och försök igen.',
+			{ id: `resolve-${resolutionType}` }
 		);
 	}
 
@@ -182,7 +190,8 @@
 		if (!latestClosedVote) return;
 		return run(
 			() => rerunVote({ meetingId: meeting.id, voteId: latestClosedVote.id }),
-			'En ny omröstning kunde inte skapas. Uppdatera sidan och försök igen.'
+			'En ny omröstning kunde inte skapas. Uppdatera sidan och försök igen.',
+			{ id: 'rerun-incomplete' }
 		);
 	}
 
@@ -204,7 +213,7 @@
 							expectedRevision: meeting.revision
 						}),
 					'Omröstningen kunde inte ogiltigförklaras. Uppdatera sidan och försök igen.',
-					{ rethrow: true }
+					{ rethrow: true, id: `invalidate-vote-${vote.id}` }
 				)
 		});
 	}
@@ -224,19 +233,27 @@
 					<Button
 						type="button"
 						disabled={draftVotes.length === 0 || busy}
+						loading={loading.has('activate-next')}
 						onclick={requestActivateNext}
 					>
 						Aktivera nästa
 					</Button>
 				{:else}
-					<Button type="button" variant="outline" disabled={busy} onclick={close}
-						>Stäng omröstning</Button
+					<Button
+						type="button"
+						variant="outline"
+						disabled={busy}
+						onclick={close}
+						loading={loading.has('close')}
 					>
+						Stäng omröstning
+					</Button>
 					<Button
 						type="button"
 						variant="ghost"
 						destructive
 						disabled={busy}
+						loading={loading.has('invalidate-vote')}
 						onclick={() => invalidate(activeVote)}>Ogiltigförklara</Button
 					>
 				{/if}
@@ -272,6 +289,7 @@
 							variant="outline"
 							class="justify-start"
 							disabled={busy}
+							loading={loading.has('activate-vote')}
 							onclick={() => activate(vote)}>{vote.title}</Button
 						>
 					{/each}
@@ -289,8 +307,11 @@
 					type="button"
 					variant="ghost"
 					disabled={busy || hasUnresolvedIncompleteVote}
-					onclick={end}>Avsluta möte</Button
+					loading={loading.has('end-meeting')}
+					onclick={end}
 				>
+					Avsluta möte
+				</Button>
 			</div>
 			{#if hasUnresolvedIncompleteVote}
 				<p class="mt-3 text-right text-sm text-muted-foreground">
@@ -323,6 +344,7 @@
 						variant="ghost"
 						destructive
 						disabled={busy}
+						loading={loading.has(`invalidate-vote-${latestClosedVote.id}`)}
 						onclick={() => invalidate(latestClosedVote)}
 					>
 						Ogiltigförklara
@@ -333,6 +355,7 @@
 						type="button"
 						variant={latestClosedVote.resolution?.type === 'accept' ? 'default' : 'outline'}
 						disabled={busy}
+						loading={loading.has('accept-incomplete')}
 						onclick={() => resolveIncomplete('accept')}
 					>
 						Godkänn inkomplett resultat
@@ -341,21 +364,30 @@
 						type="button"
 						variant={latestClosedVote.resolution?.type === 'vacancy' ? 'default' : 'outline'}
 						disabled={busy}
+						loading={loading.has('resolve-vacancy')}
 						onclick={() => resolveIncomplete('vacancy')}
 					>
 						Markera återstående platser som vakanta
 					</Button>
-					<Button type="button" variant="outline" disabled={busy} onclick={rerunIncomplete}>
+					<Button
+						type="button"
+						variant="outline"
+						disabled={busy}
+						onclick={rerunIncomplete}
+						loading={loading.has('rerun-incomplete')}
+					>
 						Gör om omröstningen
 					</Button>
 				{:else if !latestClosedVote.revealed}
 					<Button
 						type="button"
 						disabled={busy}
+						loading={loading.has('reveal-vote')}
 						onclick={() =>
 							run(
 								() => revealVote({ meetingId: meeting.id, voteId: latestClosedVote.id }),
-								'Resultatet kunde inte visas. Uppdatera sidan och försök igen.'
+								'Resultatet kunde inte visas. Uppdatera sidan och försök igen.',
+								{ id: 'reveal-vote' }
 							)}
 					>
 						Visa slutresultat
@@ -365,6 +397,7 @@
 						type="button"
 						variant="outline"
 						disabled={busy}
+						loading={loading.has(`update-public-result`)}
 						onclick={() =>
 							run(
 								() =>
@@ -373,7 +406,8 @@
 										voteId: latestClosedVote.id,
 										enabled: !latestClosedVote.publicResultBreakdownEnabled
 									}),
-								'Resultatöversikten kunde inte ändras. Uppdatera sidan och försök igen.'
+								'Resultatöversikten kunde inte ändras. Uppdatera sidan och försök igen.',
+								{ id: `update-public-result` }
 							)}
 					>
 						{latestClosedVote.publicResultBreakdownEnabled

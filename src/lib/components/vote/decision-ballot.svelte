@@ -8,8 +8,7 @@
 	import { STALE_ACTIVE_VOTE_MESSAGE } from '#lib/vote/ballot.js';
 	import type { ParticipantBallot } from '#lib/vote/meeting.js';
 	import { refreshAll } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 
 	let {
@@ -86,7 +85,6 @@
 	<input {...form.fields.publicLocator.as('hidden', publicLocator)} />
 	<input {...form.fields.activeVoteKey.as('hidden', activeVoteKey)} />
 	<input {...form.fields.initialSubmissionKey.as('hidden', initialSubmissionKey ?? '')} />
-	<p class="text-muted-foreground">{decision.majorityLabel}</p>
 
 	<RadioSelector
 		selected={choice}

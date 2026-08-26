@@ -65,6 +65,7 @@
 	class={cn(loading && '[&_svg:not([data-loading-icon])]:hidden', className)}
 	disabled={loading || disabled}
 	{destructive}
+	data-loading={loading ? '' : undefined}
 	onclick={async (e) => {
 		onclick?.(e as never);
 

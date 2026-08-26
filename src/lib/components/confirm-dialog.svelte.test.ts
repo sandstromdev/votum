@@ -98,7 +98,7 @@ it('keeps the dialog open and shows loading while an async confirmation is pendi
 	expect(onConfirm).toHaveBeenCalledOnce();
 	await expect.element(screen.getByRole('alertdialog')).toBeVisible();
 	await expect.element(confirm).toBeDisabled();
-	await expect.element(screen.getByRole('status')).toHaveTextContent('Sparar');
+	await expect.element(confirm).toHaveAttribute('data-loading');
 
 	resolveConfirmation();
 	await expect.element(screen.getByRole('alertdialog')).not.toBeInTheDocument();

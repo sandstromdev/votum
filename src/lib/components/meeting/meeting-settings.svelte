@@ -138,28 +138,32 @@
 				{#if expectedParticipantCount}
 					<input {...form.fields.expectedParticipantCount.as('hidden', expectedParticipantCount)} />
 				{/if}
-				<NumberField
-					class="!w-40"
-					bind:value={expectedParticipantCount}
-					placeholder="Tomt"
-					disabled={isClosed}
-					id={`expected-participants-${meeting.id}`}
-				/>
+
+				<div class="flex gap-3">
+					<NumberField
+						class="!w-40"
+						bind:value={expectedParticipantCount}
+						placeholder="Tomt"
+						disabled={isClosed}
+						id={`expected-participants-${meeting.id}`}
+					/>
+					<Button
+						type="submit"
+						variant="outline"
+						disabled={isClosed}
+						loading={form.pending > 0}
+						class="w-max"
+					>
+						Spara
+					</Button>
+				</div>
+
 				<Field.Description
 					>Lämna tomt om du inte vill visa ett uppskattat deltagarantal.</Field.Description
 				>
 
 				<Field.Error errors={form.fields.expectedParticipantCount.issues()} />
 			</Field.Field>
-			<Button
-				type="submit"
-				variant="outline"
-				disabled={isClosed}
-				loading={form.pending > 0}
-				class="w-max"
-			>
-				Spara
-			</Button>
 		</form>
 		<p class="mt-3 text-xs text-muted-foreground">
 			{isClosed ? 'Mötet är avslutat och inställningarna kan inte längre ändras.' : ''}

@@ -300,7 +300,8 @@ it('shows the active Vote presentation without future agenda details', async () 
 						supportLabel: 'För',
 						opposeLabel: 'Emot',
 						abstentionLabel: 'Avstår',
-						majorityLabel: 'Fler röster för än emot. Avståenden räknas inte.'
+						majorityLabel:
+							'Förslaget går igenom om fler röstar för än emot. Avståenden påverkar inte utfallet.'
 					}
 				},
 				participation: { current: 0, expected: 25 },
@@ -310,9 +311,15 @@ it('shows the active Vote presentation without future agenda details', async () 
 		}
 	});
 
+	await screen.getByRole('button', { name: 'Så här tas beslutet' }).click();
 	await expect
-		.element(screen.getByText('Fler röster för än emot. Avståenden räknas inte.'))
+		.element(
+			screen.getByText(
+				'Förslaget går igenom om fler röstar för än emot. Avståenden påverkar inte utfallet.'
+			)
+		)
 		.toBeVisible();
+
 	await expect.element(screen.getByText('För', { exact: true })).toBeVisible();
 	await expect.element(screen.getByText('Emot', { exact: true })).toBeVisible();
 	await expect.element(screen.getByText('Avstår', { exact: true })).toBeVisible();
