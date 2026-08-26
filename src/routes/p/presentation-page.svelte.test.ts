@@ -71,7 +71,7 @@ it('shows an active Decision Vote and public progress without ballot controls', 
 						supportLabel: 'För',
 						opposeLabel: 'Emot',
 						abstentionLabel: 'Avstår',
-						majorityLabel: 'Enkel majoritet'
+						majorityLabel: 'Fler röstar för än emot'
 					}
 				},
 				participation: { current: 8, expected: 25 },
@@ -82,7 +82,7 @@ it('shows an active Decision Vote and public progress without ballot controls', 
 	});
 
 	await expect.element(screen.getByRole('heading', { name: 'Godkänn budgeten' })).toBeVisible();
-	await expect.element(screen.getByText('Enkel majoritet')).toBeVisible();
+	await expect.element(screen.getByText('Fler röstar för än emot')).toBeVisible();
 	await expect.element(screen.getByText('8 av 25 deltagare har röstat')).toBeVisible();
 	await expect.element(screen.getByRole('list', { name: 'Svarsalternativ' })).toBeVisible();
 	await expect
@@ -172,7 +172,7 @@ it('shows a revealed Qualified-majority rejection and its optional breakdown', a
 						kind: 'decision',
 						state: 'rejected',
 						winner: null,
-						majorityLabel: 'Kvalificerad majoritet, avståenden räknades',
+						majorityLabel: 'Minst två tredjedelar röstar för, avståenden räknas med',
 						abstentionsCounted: true
 					},
 					breakdown: { support: 1, oppose: 2, abstention: 1 }
@@ -184,7 +184,7 @@ it('shows a revealed Qualified-majority rejection and its optional breakdown', a
 
 	await expect.element(screen.getByText('Förslaget gick inte igenom')).toBeVisible();
 	await expect
-		.element(screen.getByText('Kvalificerad majoritet, avståenden räknades'))
+		.element(screen.getByText('Minst två tredjedelar röstar för, avståenden räknas med'))
 		.toBeVisible();
 	await expect.element(screen.getByRole('list', { name: 'Röstfördelning' })).toBeVisible();
 	await expect.element(screen.getByRole('main')).toHaveTextContent('1');
@@ -196,12 +196,12 @@ it('uses the public wording for tied and no-result Decisions', async () => {
 		{
 			state: 'tie' as const,
 			label: 'Oavgjort',
-			majorityLabel: 'Enkel majoritet'
+			majorityLabel: 'Fler röstar för än emot'
 		},
 		{
 			state: 'no-result' as const,
 			label: 'Inget resultat',
-			majorityLabel: 'Kvalificerad majoritet'
+			majorityLabel: 'Minst två tredjedelar röstar för, avståenden påverkar inte utfallet'
 		}
 	]) {
 		const screen = await render(Page, {

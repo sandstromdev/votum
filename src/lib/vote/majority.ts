@@ -13,17 +13,21 @@ export function majorityRuleLabel({
 	majorityRule,
 	abstentionsCounted
 }: DecisionMajorityConfiguration) {
-	if (majorityRule === 'simple') return 'Enkel majoritet';
+	if (majorityRule === 'simple') return 'Fler röstar för än emot';
 	return abstentionsCounted
-		? 'Kvalificerad majoritet, avståenden räknades'
-		: 'Kvalificerad majoritet';
+		? 'Minst två tredjedelar röstar för, avståenden räknas med'
+		: 'Minst två tredjedelar röstar för, avståenden påverkar inte utfallet';
 }
 
 export function majorityRequirement({
 	majorityRule,
 	abstentionsCounted
 }: DecisionMajorityConfiguration) {
-	if (majorityRule === 'simple') return 'Fler röster för än emot. Avståenden räknas inte.';
-	if (abstentionsCounted) return 'Minst två tredjedelar ja av alla röster, avståenden inräknade.';
-	return 'Minst två tredjedelar ja mot nej.';
+	if (majorityRule === 'simple') {
+		return 'Förslaget går igenom om fler röstar för än emot. Avståenden påverkar inte utfallet.';
+	}
+	if (abstentionsCounted) {
+		return 'Förslaget går igenom om minst två tredjedelar av alla röster är för. Avståenden räknas med.';
+	}
+	return 'Förslaget går igenom om minst två tredjedelar av rösterna för eller emot är för. Avståenden påverkar inte utfallet.';
 }

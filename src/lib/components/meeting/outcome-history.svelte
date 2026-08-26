@@ -3,6 +3,7 @@
 	import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
 	import { rerunVote } from '#lib/remotes/meeting.remote.js';
 	import type { OrganizerMeeting } from '#lib/vote/meeting.js';
+	import { majorityRuleLabel } from '#lib/vote/majority.js';
 	import { outcomeLabel, type OutcomeHistoryEntry } from '#lib/vote/outcome.js';
 	import { refreshAll } from '$app/navigation';
 	import {
@@ -196,8 +197,10 @@
 
 						{#if entry.kind === 'decision' && entry.majorityRule}
 							<p class="mt-3 text-xs text-muted-foreground">
-								{entry.majorityRule === 'qualified' ? 'Kvalificerad majoritet' : 'Enkel majoritet'}
-								· Avståenden {entry.abstentionsCounted ? 'räknades' : 'räknades inte'}
+								{majorityRuleLabel({
+									majorityRule: entry.majorityRule,
+									abstentionsCounted: entry.abstentionsCounted ?? false
+								})}
 							</p>
 						{/if}
 

@@ -4,25 +4,25 @@ import { majorityRequirement, majorityRuleLabel } from './majority.js';
 describe('majority copy', () => {
 	it('names the closed-vote rule without a middle dot', () => {
 		expect(majorityRuleLabel({ majorityRule: 'simple', abstentionsCounted: false })).toBe(
-			'Enkel majoritet'
+			'Fler röstar för än emot'
 		);
 		expect(majorityRuleLabel({ majorityRule: 'qualified', abstentionsCounted: false })).toBe(
-			'Kvalificerad majoritet'
+			'Minst två tredjedelar röstar för, avståenden påverkar inte utfallet'
 		);
 		expect(majorityRuleLabel({ majorityRule: 'qualified', abstentionsCounted: true })).toBe(
-			'Kvalificerad majoritet, avståenden räknades'
+			'Minst två tredjedelar röstar för, avståenden räknas med'
 		);
 	});
 
 	it('explains the live-vote requirement in the present tense', () => {
 		expect(majorityRequirement({ majorityRule: 'simple', abstentionsCounted: false })).toBe(
-			'Fler röster för än emot. Avståenden räknas inte.'
+			'Förslaget går igenom om fler röstar för än emot. Avståenden påverkar inte utfallet.'
 		);
 		expect(majorityRequirement({ majorityRule: 'qualified', abstentionsCounted: false })).toBe(
-			'Minst två tredjedelar ja mot nej.'
+			'Förslaget går igenom om minst två tredjedelar av rösterna för eller emot är för. Avståenden påverkar inte utfallet.'
 		);
 		expect(majorityRequirement({ majorityRule: 'qualified', abstentionsCounted: true })).toBe(
-			'Minst två tredjedelar ja av alla röster, avståenden inräknade.'
+			'Förslaget går igenom om minst två tredjedelar av alla röster är för. Avståenden räknas med.'
 		);
 	});
 });

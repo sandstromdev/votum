@@ -185,7 +185,8 @@ describe('Meeting commands', () => {
 					supportLabel: 'För',
 					opposeLabel: 'Emot',
 					abstentionLabel: 'Avstår',
-					majorityLabel: 'Fler röster för än emot. Avståenden räknas inte.'
+					majorityLabel:
+						'Förslaget går igenom om fler röstar för än emot. Avståenden påverkar inte utfallet.'
 				}
 			},
 			participation: { current: 0, expected: 12 },
