@@ -27,10 +27,17 @@ export const participantToken = snakeCase.table(
 			.notNull()
 			.references(() => meeting.id, { onDelete: 'restrict' }),
 		tokenHash: text().notNull(),
+		initialSubmissionKeyHash: text(),
+		initialSubmissionVoteId: uuid().references(() => vote.id, { onDelete: 'restrict' }),
+		initialSubmissionPayloadHash: text(),
+		initialSubmissionTokenCiphertext: text(),
 		createdAt: timestamp().defaultNow().notNull()
 	},
 	(table) => [
 		uniqueIndex('participant_token_hash_uidx').on(table.tokenHash),
+		uniqueIndex('participant_token_meeting_initial_submission_key_uidx')
+			.on(table.meetingId, table.initialSubmissionKeyHash)
+			.where(sql`${table.initialSubmissionKeyHash} IS NOT NULL`),
 		// Lets a ballot reference this token only within the same meeting.
 		uniqueIndex('participant_token_id_meeting_id_uidx').on(table.id, table.meetingId)
 	]

@@ -30,6 +30,7 @@ const ballotRemote = vi.hoisted(() => {
 			fields: {
 				publicLocator: createField('publicLocator', ''),
 				activeVoteKey: createField('activeVoteKey', ''),
+				initialSubmissionKey: createField('initialSubmissionKey', ''),
 				vacancyCount: createField('vacancyCount', 0),
 				abstain: createField('abstain', false),
 				choice: createField('choice', ''),

@@ -29,6 +29,10 @@ import {
 } from '#lib/vote/outcome.js';
 import { majorityRequirement, majorityRuleLabel } from '#lib/vote/majority.js';
 import { createActiveVoteKey } from './active-vote-key.js';
+import {
+	recordParticipantTokenAnomalyBestEffort,
+	type ParticipantTokenAnomalyInput
+} from '#lib/server/ballot/diagnostics.js';
 
 function participantDecisionLabels(decision: {
 	supportLabel: string;
@@ -136,8 +140,8 @@ function toPublicResult(
 	};
 }
 
-export async function listOrganizerMeetings(organizerUserId: string) {
-	const rows = await db
+export async function readOrganizerMeetings(executor: AgendaExecutor, organizerUserId: string) {
+	const rows = await executor
 		.select(organizerMeetingColumns)
 		.from(meeting)
 		.where(eq(meeting.organizerUserId, organizerUserId))
@@ -145,8 +149,8 @@ export async function listOrganizerMeetings(organizerUserId: string) {
 
 	const meetingIds = rows.map((row) => row.id);
 	const [agendas, activeBallotCounts] = await Promise.all([
-		readAgendaForMeetings(db, meetingIds),
-		readActiveBallotCounts(db, meetingIds)
+		readAgendaForMeetings(executor, meetingIds),
+		readActiveBallotCounts(executor, meetingIds)
 	]);
 
 	return rows.map((row) =>
@@ -154,14 +158,26 @@ export async function listOrganizerMeetings(organizerUserId: string) {
 	);
 }
 
-export async function getOrganizerMeetingByLocator({
-	organizerUserId,
-	publicLocator
-}: {
-	organizerUserId: string;
-	publicLocator: string;
-}) {
-	const [row] = await db
+export async function listOrganizerMeetings(organizerUserId: string) {
+	// Keep Meeting rows, agenda configuration, outcome data, resolutions, and Ballot counts on one
+	// snapshot without taking row locks while another command commits.
+	return db.transaction((tx) => readOrganizerMeetings(tx, organizerUserId), {
+		isolationLevel: 'repeatable read',
+		accessMode: 'read only'
+	});
+}
+
+export async function readOrganizerMeetingByLocator(
+	executor: AgendaExecutor,
+	{
+		organizerUserId,
+		publicLocator
+	}: {
+		organizerUserId: string;
+		publicLocator: string;
+	}
+) {
+	const [row] = await executor
 		.select(organizerMeetingColumns)
 		.from(meeting)
 		.where(
@@ -172,17 +188,33 @@ export async function getOrganizerMeetingByLocator({
 	if (!row) return null;
 
 	const [agenda, activeBallotCount] = await Promise.all([
-		readAgendaForMeeting(db, row.id),
-		readActiveBallotCount(db, row.id)
+		readAgendaForMeeting(executor, row.id),
+		readActiveBallotCount(executor, row.id)
 	]);
 
 	return mapOrganizerMeeting(row, agenda, activeBallotCount);
 }
 
+export async function getOrganizerMeetingByLocator({
+	organizerUserId,
+	publicLocator
+}: {
+	organizerUserId: string;
+	publicLocator: string;
+}) {
+	// Keep Meeting rows, agenda configuration, outcome data, resolutions, and Ballot counts on one
+	// snapshot without taking row locks while another command commits.
+	return db.transaction(
+		(tx) => readOrganizerMeetingByLocator(tx, { organizerUserId, publicLocator }),
+		{ isolationLevel: 'repeatable read', accessMode: 'read only' }
+	);
+}
+
 async function readParticipantPageProjection(
 	tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
 	publicLocator: string,
-	rawParticipantToken: string | undefined
+	rawParticipantToken: string | undefined,
+	onTokenAnomaly?: (input: ParticipantTokenAnomalyInput) => void
 ): Promise<ParticipantPageProjection> {
 	// A repeatable-read snapshot keeps meeting revision, lifecycle, and active vote aligned while an
 	// organizer may be activating or closing a vote in another transaction.
@@ -282,7 +314,8 @@ async function readParticipantPageProjection(
 	const currentBallot = await readCurrentParticipantBallot(tx, {
 		meetingId: row.meetingId,
 		voteId: activeVote.id,
-		rawParticipantToken
+		rawParticipantToken,
+		onTokenAnomaly
 	});
 	const activeProjection = {
 		state: 'active' as const,
@@ -324,11 +357,19 @@ export async function getParticipantPageProjection(
 	publicLocator: string,
 	rawParticipantToken?: string
 ): Promise<ParticipantPageProjection> {
-	// Reading a participant ballot may record a token diagnostic, so this transaction must allow writes.
-	return db.transaction(
-		(tx) => readParticipantPageProjection(tx, publicLocator, rawParticipantToken),
-		{ isolationLevel: 'repeatable read' }
+	let anomaly: ParticipantTokenAnomalyInput | undefined;
+	const projection = await db.transaction(
+		(tx) =>
+			readParticipantPageProjection(tx, publicLocator, rawParticipantToken, (input) => {
+				anomaly = input;
+			}),
+		{ isolationLevel: 'repeatable read', accessMode: 'read only' }
 	);
+
+	// The projection transaction has committed before this separate best-effort write starts. This
+	// avoids both savepoint poisoning and pool deadlock when many pages report the same anomaly.
+	if (anomaly) await recordParticipantTokenAnomalyBestEffort(anomaly);
+	return projection;
 }
 
 export async function getParticipantProjection(

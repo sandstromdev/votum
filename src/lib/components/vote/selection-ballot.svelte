@@ -9,6 +9,7 @@
 	import { STALE_ACTIVE_VOTE_MESSAGE } from '#lib/vote/ballot.js';
 	import type { ParticipantBallot, ParticipantPageProjection } from '#lib/vote/meeting.js';
 	import { refreshAll } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { untrack } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 
@@ -38,6 +39,11 @@
 	const selected = new SvelteSet<string>(untrack(() => currentBallot?.selectedOptionIds ?? []));
 
 	let dirty = $state(false);
+	let initialSubmissionKey = $state<string | undefined>();
+
+	onMount(() => {
+		initialSubmissionKey = crypto.randomUUID();
+	});
 	let vacancyCount = $state(untrack(() => currentBallot?.vacancyCount ?? 0));
 	let abstain = $state(untrack(() => currentBallot?.abstain ?? false));
 
@@ -136,6 +142,7 @@
 >
 	<input {...form.fields.publicLocator.as('hidden', publicLocator)} />
 	<input {...form.fields.activeVoteKey.as('hidden', activeVoteKey)} />
+	<input {...form.fields.initialSubmissionKey.as('hidden', initialSubmissionKey ?? '')} />
 	<input {...form.fields.vacancyCount.as('hidden', vacancyCount)} />
 	<input {...form.fields.abstain.as('hidden', abstain)} />
 

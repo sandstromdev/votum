@@ -53,7 +53,7 @@ export async function mutateEditableMeeting<T>({
 	});
 
 	if (committed && committed.revision !== null) {
-		meetingPubSub.publish(meetingId, committed.revision);
+		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	}
 
 	return committed?.value ?? null;

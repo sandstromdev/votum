@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { addDraftVote } from '#lib/server/agenda/index.js';
 import {
@@ -54,7 +55,8 @@ describe('Vote outcomes', () => {
 		return submitDecisionBallot({
 			publicLocator,
 			choice,
-			activeVoteKey: await currentActiveVoteKey(publicLocator)
+			activeVoteKey: currentActiveVoteKey(publicLocator),
+			initialSubmissionKey: randomUUID()
 		});
 	}
 
@@ -65,7 +67,8 @@ describe('Vote outcomes', () => {
 		return submitSelectionBallot({
 			publicLocator,
 			...input,
-			activeVoteKey: await currentActiveVoteKey(publicLocator)
+			activeVoteKey: currentActiveVoteKey(publicLocator),
+			initialSubmissionKey: randomUUID()
 		});
 	}
 

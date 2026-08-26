@@ -10,6 +10,7 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
+		"preview:node": "bun run build && node --env-file-if-exists=.env build",
 		"prepare": "svelte-kit sync || echo '' && husky",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -17,16 +18,18 @@
 		"format": "prettier --cache --write .",
 		"test:unit": "vitest",
 		"test": "bun run test:unit -- --run",
+		"load-test": "bun run scripts/load-test.ts",
+		"load:test": "bun run scripts/load-test.ts",
 		"test:coverage": "vitest run --project server --coverage",
 		"db:start": "docker compose up",
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"db:migrate:runtime": "node scripts/server/migrate.mjs",
+		"db:migrate:runtime": "bun run scripts/server/migrate.mjs",
 		"db:seed": "bun run scripts/run-seed.ts",
 		"db:studio": "drizzle-kit studio",
 		"auth:schema": "auth generate --config src/lib/server/auth/config.ts --output src/lib/server/db/schema/auth.generated.ts --yes",
-		"setup:user": "node scripts/server/setup-user.mjs"
+		"setup:user": "bun run scripts/server/setup-user.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

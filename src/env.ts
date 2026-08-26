@@ -13,6 +13,22 @@ export const variables = defineEnvVars({
 		schema: buildOptional(z.url()),
 		description: 'The database connection string.'
 	},
+	DATABASE_POOL_MAX: {
+		schema: buildOptional(
+			z.string().default('20').transform(Number).pipe(z.number().int().min(1).max(100))
+		),
+		description: 'Maximum PostgreSQL connections per application process (default: 20).'
+	},
+	VOTUM_TIMINGS: {
+		schema: buildOptional(z.stringbool().default(false)),
+		description: 'Set to `1` to emit structured server timing events. Unset by default.'
+	},
+	VOTUM_LIVE_UPDATE_DEBOUNCE_MS: {
+		schema: buildOptional(
+			z.string().default('500').transform(Number).pipe(z.number().int().min(50))
+		),
+		description: 'Live-update debounce in milliseconds (default: 500).'
+	},
 	ORIGIN: {
 		public: true,
 		schema: buildOptional(z.url()),

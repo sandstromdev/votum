@@ -8,6 +8,7 @@
 	import { STALE_ACTIVE_VOTE_MESSAGE } from '#lib/vote/ballot.js';
 	import type { ParticipantBallot } from '#lib/vote/meeting.js';
 	import { refreshAll } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { untrack } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 
@@ -31,6 +32,11 @@
 	const submitting = new SvelteSet<string>();
 
 	let dirty = $state(false);
+	let initialSubmissionKey = $state<string | undefined>();
+
+	onMount(() => {
+		initialSubmissionKey = crypto.randomUUID();
+	});
 
 	let choice = $state<string | undefined>(untrack(() => currentBallot?.choice ?? undefined));
 
@@ -79,6 +85,7 @@
 >
 	<input {...form.fields.publicLocator.as('hidden', publicLocator)} />
 	<input {...form.fields.activeVoteKey.as('hidden', activeVoteKey)} />
+	<input {...form.fields.initialSubmissionKey.as('hidden', initialSubmissionKey ?? '')} />
 	<p class="text-muted-foreground">{decision.majorityLabel}</p>
 
 	<RadioSelector
