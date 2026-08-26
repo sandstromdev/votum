@@ -2,8 +2,15 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 
+type FormPhaseOperation = `${'submit' | 'replace'}_${'choice' | 'request' | 'stabilization'}`;
 type OperationName =
-	'initial_read' | 'presentation_read' | 'submit' | 'read' | 'replace' | 'withdraw';
+	| 'initial_read'
+	| 'presentation_read'
+	| 'submit'
+	| 'read'
+	| 'replace'
+	| 'withdraw'
+	| FormPhaseOperation;
 
 type Sample =
 	| { operation: OperationName; durationMs: number; outcome: 'success' }
@@ -14,6 +21,7 @@ type Config = {
 	meetingLocator: string;
 	users: number;
 	rampMs: number;
+	submitRampMs: number;
 	holdMs: number;
 	readPercent: number;
 	replacePercent: number;
@@ -57,6 +65,7 @@ type Report = {
 	connectedParticipants: number;
 	config: {
 		rampMs: number;
+		submitRampMs: number;
 		holdMs: number;
 		readPercent: number;
 		replacePercent: number;
@@ -74,6 +83,7 @@ type Report = {
 const DEFAULTS = {
 	users: 25,
 	rampMs: 10_000,
+	submitRampMs: 0,
 	holdMs: 30_000,
 	readPercent: 50,
 	replacePercent: 20,
@@ -93,6 +103,7 @@ Required:
 Options:
   --users N                   Participant browser contexts (default: ${DEFAULTS.users}).
   --ramp-ms N                 Time to ramp all participants (default: ${DEFAULTS.rampMs}).
+  --submit-ramp-ms N          Time to stagger initial Ballot submissions (default: ${DEFAULTS.submitRampMs}; 0 = burst).
   --hold-ms N                 Time to keep live clients and stagger follow-up work (default: ${DEFAULTS.holdMs}).
   --read-percent N            Participants that reload during hold (default: ${DEFAULTS.readPercent}).
   --replace-percent N         Participants that replace their Ballot (default: ${DEFAULTS.replacePercent}).
@@ -102,6 +113,9 @@ Options:
   --headed                    Show the browser. Avoid for larger runs.
   --dry-run                   Validate and print the plan without opening a browser.
   --help                     Show this help.
+
+Submit reports keep the overall submit sample and add submit_choice, submit_request, and
+submit_stabilization phase samples. Set VOTUM_TIMINGS=1 on the app for server timing logs.
 
 Examples:
   bun run load:test -- --dry-run --base-url https://votum.example --meeting-locator ar4m7x2q --users 100
@@ -201,6 +215,13 @@ function parseConfig(tokens: readonly string[]): Config {
 
 	const users = readInteger(flags, 'users', 'LOAD_TEST_USERS', DEFAULTS.users, 1);
 	const rampMs = readInteger(flags, 'ramp-ms', 'LOAD_TEST_RAMP_MS', DEFAULTS.rampMs, 0);
+	const submitRampMs = readInteger(
+		flags,
+		'submit-ramp-ms',
+		'LOAD_TEST_SUBMIT_RAMP_MS',
+		DEFAULTS.submitRampMs,
+		0
+	);
 	const holdMs = readInteger(flags, 'hold-ms', 'LOAD_TEST_HOLD_MS', DEFAULTS.holdMs, 0);
 	const readPercentSetting = readPercentValue(flags);
 	const replacePercent = readPercent(
@@ -232,6 +253,7 @@ function parseConfig(tokens: readonly string[]): Config {
 		meetingLocator,
 		users,
 		rampMs,
+		submitRampMs,
 		holdMs,
 		readPercent: readPercentSetting,
 		replacePercent,
@@ -294,6 +316,16 @@ async function measure<T>(
 		});
 		return { outcome: 'failure', error };
 	}
+}
+
+async function measureOrThrow<T>(
+	samples: Sample[],
+	operation: OperationName,
+	action: () => Promise<T>
+) {
+	const result = await measure(samples, operation, action);
+	if (result.outcome === 'failure') throw result.error;
+	return result.value;
 }
 
 function ballotButton(page: Page) {
@@ -373,16 +405,35 @@ async function chooseBallot(page: Page, alternative: boolean, timeoutMs: number)
 	);
 }
 
-async function submitBallot(page: Page, timeoutMs: number, alternative: boolean) {
-	await chooseBallot(page, alternative, timeoutMs);
-	await ballotButton(page).first().click({ timeout: timeoutMs });
-	await page
-		.getByRole('button', { name: /^Ta tillbaka/ })
-		.first()
-		.waitFor({
-			state: 'visible',
-			timeout: timeoutMs
-		});
+async function submitBallot(
+	page: Page,
+	timeoutMs: number,
+	alternative: boolean,
+	samples: Sample[],
+	operation: 'submit' | 'replace'
+) {
+	await measureOrThrow(samples, `${operation}_choice`, () =>
+		chooseBallot(page, alternative, timeoutMs)
+	);
+
+	await measureOrThrow(samples, `${operation}_request`, async () => {
+		const [response] = await Promise.all([
+			page.waitForResponse((response) => response.request().method() === 'POST', {
+				timeout: timeoutMs
+			}),
+			ballotButton(page).first().click({ timeout: timeoutMs })
+		]);
+		if (!response.ok()) {
+			throw new Error(`Ballot form request failed with HTTP ${response.status()}.`);
+		}
+	});
+
+	await measureOrThrow(samples, `${operation}_stabilization`, () =>
+		page
+			.getByRole('button', { name: /^Ta tillbaka/ })
+			.first()
+			.waitFor({ state: 'visible', timeout: timeoutMs })
+	);
 }
 
 async function readParticipant(page: Page, timeoutMs: number) {
@@ -390,16 +441,8 @@ async function readParticipant(page: Page, timeoutMs: number) {
 	await waitForActiveVote(page, timeoutMs);
 }
 
-async function replaceBallot(page: Page, timeoutMs: number) {
-	await chooseBallot(page, true, timeoutMs);
-	await ballotButton(page).first().click({ timeout: timeoutMs });
-	await page
-		.getByRole('button', { name: /^Ta tillbaka/ })
-		.first()
-		.waitFor({
-			state: 'visible',
-			timeout: timeoutMs
-		});
+async function replaceBallot(page: Page, timeoutMs: number, samples: Sample[]) {
+	await submitBallot(page, timeoutMs, true, samples, 'replace');
 }
 
 async function withdrawBallot(page: Page, timeoutMs: number) {
@@ -473,10 +516,15 @@ async function submitInitialBallots(
 	config: Config,
 	samples: Sample[]
 ) {
+	const startedAt = Date.now();
 	await Promise.all(
-		participants.map(async (participant) => {
+		participants.map(async (participant, index) => {
+			const scheduledAt =
+				startedAt +
+				Math.round((config.submitRampMs * index) / Math.max(1, participants.length - 1));
+			await sleepUntil(scheduledAt);
 			const result = await measure(samples, 'submit', () =>
-				submitBallot(participant.page, config.timeoutMs, false)
+				submitBallot(participant.page, config.timeoutMs, false, samples, 'submit')
 			);
 			participant.ballotSubmitted = result.outcome === 'success';
 		})
@@ -505,7 +553,9 @@ async function runHoldActions(participants: Participant[], config: Config, sampl
 
 			if (bucket < replaceLimit) {
 				if (!participant.ballotSubmitted) return;
-				await measure(samples, 'replace', () => replaceBallot(participant.page, config.timeoutMs));
+				await measure(samples, 'replace', () =>
+					replaceBallot(participant.page, config.timeoutMs, samples)
+				);
 				return;
 			}
 
@@ -576,6 +626,7 @@ function createReport(
 		connectedParticipants: participantCount,
 		config: {
 			rampMs: config.rampMs,
+			submitRampMs: config.submitRampMs,
 			holdMs: config.holdMs,
 			readPercent: config.readPercent,
 			replacePercent: config.replacePercent,
@@ -623,6 +674,7 @@ async function run(config: Config) {
 		meetingLocator: config.meetingLocator,
 		users: config.users,
 		rampMs: config.rampMs,
+		submitRampMs: config.submitRampMs,
 		holdMs: config.holdMs,
 		readPercent: config.readPercent,
 		replacePercent: config.replacePercent,
@@ -668,7 +720,11 @@ async function run(config: Config) {
 			throw new Error('No participant browser reached an active Vote.');
 		}
 
-		console.info(`Submitting ${participants.length} Ballots concurrently.`);
+		console.info(
+			config.submitRampMs === 0
+				? `Submitting ${participants.length} Ballots concurrently.`
+				: `Submitting ${participants.length} Ballots over ${config.submitRampMs} ms.`
+		);
 		await submitInitialBallots(participants, config, samples);
 		await runHoldActions(participants, config, samples);
 	} catch (error) {

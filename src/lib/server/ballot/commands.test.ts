@@ -178,7 +178,7 @@ describe('Vote Ballots', () => {
 		});
 	});
 
-	it('does not churn an unchanged Decision Ballot and still advances real changes once', async () => {
+	it('does not churn an unchanged Decision Ballot and keeps ballot changes out of the Meeting revision', async () => {
 		const { meeting } = await createActiveDecisionVote();
 		const first = await decisionBallot({
 			publicLocator: meeting.publicLocator,
@@ -217,7 +217,7 @@ describe('Vote Ballots', () => {
 				rawParticipantToken: first.createdToken
 			})
 		).toEqual({ changed: true, createdToken: null });
-		expect(await context.getMeetingRevision(meeting.id)).toBe(beforeRevision + 1);
+		expect(await context.getMeetingRevision(meeting.id)).toBe(beforeRevision);
 
 		expect(
 			await withdrawDecisionBallot({
@@ -225,7 +225,7 @@ describe('Vote Ballots', () => {
 				rawParticipantToken: first.createdToken
 			})
 		).toEqual({ changed: true });
-		expect(await context.getMeetingRevision(meeting.id)).toBe(beforeRevision + 2);
+		expect(await context.getMeetingRevision(meeting.id)).toBe(beforeRevision);
 	});
 
 	it('does not churn an unchanged single-winner Selection Ballot', async () => {
@@ -601,6 +601,28 @@ describe('Vote Ballots', () => {
 		});
 	});
 
+	it('accepts many distinct Participants concurrently without losing current Ballots', async () => {
+		const { meeting } = await createActiveDecisionVote();
+		const submissions = await Promise.all(
+			Array.from({ length: 32 }, (_, index) =>
+				decisionBallot({
+					publicLocator: meeting.publicLocator,
+					choice: index % 2 === 0 ? 'support' : 'oppose',
+					initialSubmissionKey: randomUUID()
+				})
+			)
+		);
+
+		expect(submissions).toHaveLength(32);
+		expect(submissions.every((submission) => submission?.changed)).toBe(true);
+		const [state] = await context.sql`
+			SELECT
+				(SELECT count(*)::int FROM participant_token WHERE meeting_id = ${meeting.id}) AS participant_count,
+				(SELECT count(*)::int FROM ballot WHERE meeting_id = ${meeting.id}) AS ballot_count
+		`;
+		expect(state).toEqual({ participant_count: 32, ballot_count: 32 });
+	});
+
 	it('replaces and withdraws one current Ballot for the same Participant token', async () => {
 		const { meeting } = await createActiveDecisionVote();
 		const first = await decisionBallot({
@@ -619,7 +641,7 @@ describe('Vote Ballots', () => {
 		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
 			participation: { current: 1, expected: 12 }
 		});
-		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({ revision: 5 });
+		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({ revision: 3 });
 
 		const withdrawn = await withdrawDecisionBallot({
 			publicLocator: meeting.publicLocator,
@@ -630,7 +652,7 @@ describe('Vote Ballots', () => {
 		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
 			participation: { current: 0, expected: 12 }
 		});
-		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({ revision: 6 });
+		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({ revision: 3 });
 	});
 
 	it('reads back only the matching Decision Ballot while the Vote is open', async () => {

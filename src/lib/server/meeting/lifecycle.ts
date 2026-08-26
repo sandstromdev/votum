@@ -185,8 +185,8 @@ export async function activateNextVote({
 }
 
 export async function closeVote({ organizerUserId, meetingId, voteId }: VoteLifecycleCommand) {
-	// Ballots also advance the meeting revision, so Close relies on the meeting and open-vote locks
-	// instead of a revision check.
+	// Ballot writes hold shared key locks on the Meeting and active Vote. Taking both rows in update
+	// mode, in the same order, makes this transaction the close boundary for committed Ballots.
 	const committed = await db.transaction(async (tx) => {
 		const [ownedMeeting] = await tx
 			.select(organizerMeetingColumns)

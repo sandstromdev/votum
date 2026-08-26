@@ -41,11 +41,14 @@ ORIGIN=https://votum.example
 BETTER_AUTH_SECRET=<at least 32 random characters>
 ```
 
-| Variable             | Required | Purpose                                                              |
-| -------------------- | -------- | -------------------------------------------------------------------- |
-| `DATABASE_URL`       | Yes      | Connection URL for the PostgreSQL database.                          |
-| `ORIGIN`             | Yes      | Public URL where users access Votum, including `https://`.           |
-| `BETTER_AUTH_SECRET` | Yes      | Secret used by Better Auth. Use at least 32 high-entropy characters. |
+| Variable                        | Required | Purpose                                                                    |
+| ------------------------------- | -------- | -------------------------------------------------------------------------- |
+| `DATABASE_URL`                  | Yes      | Connection URL for the PostgreSQL database.                                |
+| `DATABASE_POOL_MAX`             | No       | Maximum Postgres.js connections per application process (default: `20`).   |
+| `VOTUM_TIMINGS`                 | No       | Set to `1` to emit structured ballot/live-query timings. Unset by default. |
+| `VOTUM_LIVE_UPDATE_DEBOUNCE_MS` | No       | Live-update debounce in milliseconds (default: `500`, range: `0`–`60000`). |
+| `ORIGIN`                        | Yes      | Public URL where users access Votum, including `https://`.                 |
+| `BETTER_AUTH_SECRET`            | Yes      | Secret used by Better Auth. Use at least 32 high-entropy characters.       |
 
 The Dockerfile sets these container defaults:
 
@@ -88,6 +91,16 @@ Build a new image for each application release. Start the new container with the
 Do not run migrations from a pre-deploy hook that uses the old application image. That image may not contain the SQL files required by the new release.
 
 Production runs the committed SQL migrations in `drizzle/`. Do not use `db:push` in production.
+
+`VOTUM_TIMINGS=1` is intended for short diagnostic runs. It writes JSON timing events to the
+application logs for ballot transactions, ballot activity publication, and organizer live-query
+reads/yields. The events contain an operation, duration, outcome, and correlation ID. They do not
+contain tokens, form payloads, cookies, or user data. The timing context accepts a typed sink for
+tests and future log-dump/API adapters; the default adapter writes one JSON object per event to the
+application log. Remove the variable after the diagnostic run.
+
+`VOTUM_LIVE_UPDATE_DEBOUNCE_MS` controls how long ballot and lifecycle updates are coalesced before
+being delivered to live queries. It defaults to `500` milliseconds and is validated at startup.
 
 ## Backups and recovery
 

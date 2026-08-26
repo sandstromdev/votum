@@ -1,6 +1,5 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
-import { meeting } from '#lib/server/db/schema/meeting.js';
 import { ballot } from '#lib/server/db/schema/participation.js';
 import type { StoredBallotPayload } from './payload.js';
 import type { BallotTransaction } from './types.js';
@@ -38,8 +37,9 @@ export async function upsertCurrentBallot(
 		payload: StoredBallotPayload;
 	}
 ) {
-	// The caller locks the meeting and active vote first. Lock the ballot next so replacements use
-	// the same order and stay inside one transaction.
+	// The caller has already taken the shared Meeting and Vote locks. Lock an existing Ballot for a
+	// replacement. If two writes both observe no row, the unique index arbitrates the insert and the
+	// loser rereads the committed row before applying its replacement.
 	const [currentBallot] = await tx
 		.select({ id: ballot.id, payload: ballot.payload })
 		.from(ballot)
@@ -57,23 +57,31 @@ export async function upsertCurrentBallot(
 		return { kind: 'replaced' };
 	}
 
-	await tx.insert(ballot).values({
-		id: uuidv7(),
-		meetingId,
-		voteId,
-		participantTokenId,
-		payload
-	});
-	return { kind: 'inserted' };
-}
+	const [inserted] = await tx
+		.insert(ballot)
+		.values({
+			id: uuidv7(),
+			meetingId,
+			voteId,
+			participantTokenId,
+			payload
+		})
+		.onConflictDoNothing()
+		.returning({ id: ballot.id });
+	if (inserted) return { kind: 'inserted' };
 
-export async function advanceMeetingRevision(tx: BallotTransaction, meetingId: string) {
-	const [updated] = await tx
-		.update(meeting)
-		.set({ revision: sql`${meeting.revision} + 1` })
-		.where(eq(meeting.id, meetingId))
-		.returning({ revision: meeting.revision });
+	const [racedBallot] = await tx
+		.select({ id: ballot.id, payload: ballot.payload })
+		.from(ballot)
+		.where(and(eq(ballot.voteId, voteId), eq(ballot.participantTokenId, participantTokenId)))
+		.for('update')
+		.limit(1);
+	if (!racedBallot) throw new Error('Ballot disappeared after a unique-key race.');
+	if (equalStoredBallotPayload(racedBallot.payload, payload)) return { kind: 'unchanged' };
 
-	if (!updated) throw new Error('Meeting disappeared while advancing its revision.');
-	return updated.revision;
+	await tx
+		.update(ballot)
+		.set({ payload, updatedAt: new Date() })
+		.where(eq(ballot.id, racedBallot.id));
+	return { kind: 'replaced' };
 }

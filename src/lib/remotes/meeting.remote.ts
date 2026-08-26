@@ -23,10 +23,12 @@ import {
 } from '#lib/server/meeting/index.js';
 import { requireOrganizerSession } from '#lib/server/auth/session.js';
 import { getParticipantToken } from '#lib/server/participant-token.js';
+import { hashParticipantToken } from '#lib/server/ballot/identity.js';
 import {
 	liveMeetingSnapshots,
 	readOwnedMeetingIdByLocator
 } from '#lib/server/meeting/live-updates.js';
+import { createTimingContext } from '#lib/server/timing.js';
 import {
 	meetingLifecycleCommandSchema,
 	meetingLocatorQuerySchema,
@@ -55,7 +57,11 @@ export const participantMeetingLive = query.live(
 		yield* liveMeetingSnapshots(
 			meetingId,
 			() => getParticipantPageProjection(publicLocator, rawParticipantToken),
-			event.request.signal
+			event.request.signal,
+			undefined,
+			{
+				participantTokenHash: rawParticipantToken ? hashParticipantToken(rawParticipantToken) : null
+			}
 		);
 	}
 );
@@ -102,7 +108,8 @@ export const organizerMeetingLive = query.live(
 				if (!meeting) error(404, 'Mötet kunde inte hittas.');
 				return meeting;
 			},
-			event.request.signal
+			event.request.signal,
+			createTimingContext()
 		);
 	}
 );

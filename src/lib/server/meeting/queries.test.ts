@@ -17,6 +17,7 @@ import {
 	readOrganizerMeetingByLocator,
 	readOrganizerMeetings
 } from '#lib/server/meeting/queries.js';
+import { liveMeetingSnapshots } from '#lib/server/meeting/live-updates.js';
 import { createServerTestContext } from '#lib/server/testing/database.js';
 
 const context = createServerTestContext();
@@ -134,6 +135,67 @@ describe('Meeting queries', () => {
 				publicLocator: created.publicLocator
 			})
 		).toMatchObject({ activeBallotCount: 1 });
+	});
+
+	it('pushes the updated Organizer projection through the live snapshot after a Ballot commit', async () => {
+		const organizerUserId = await context.insertOrganizer();
+		const created = await createDraftMeeting({
+			organizerUserId,
+			title: 'Live-röstning',
+			expectedParticipantCount: 12
+		});
+		context.trackMeetings(created.id);
+		const vote = await addDraftVote({
+			organizerUserId,
+			meetingId: created.id,
+			title: 'Fråga',
+			kind: 'decision',
+			supportLabel: 'För',
+			opposeLabel: 'Emot',
+			abstentionLabel: 'Avstår'
+		});
+		if (!vote) throw new Error('Expected the draft Vote to be created');
+
+		await openMeeting({ organizerUserId, meetingId: created.id });
+		await activateVote({ organizerUserId, meetingId: created.id, voteId: vote.id });
+		const participant = await getParticipantPageProjection(created.publicLocator);
+		if (participant.state !== 'active') throw new Error('Expected the Vote to be active');
+
+		const controller = new AbortController();
+		const stream = liveMeetingSnapshots(
+			created.id,
+			() =>
+				getOrganizerMeetingByLocator({
+					organizerUserId,
+					publicLocator: created.publicLocator
+				}),
+			controller.signal
+		);
+
+		try {
+			expect((await stream.next()).value).toMatchObject({ activeBallotCount: 0 });
+			const nextSnapshot = stream.next();
+			await submitDecisionBallot({
+				publicLocator: created.publicLocator,
+				activeVoteKey: participant.activeVoteKey,
+				choice: 'support',
+				initialSubmissionKey: randomUUID()
+			});
+
+			const result = await Promise.race([
+				nextSnapshot,
+				new Promise<never>((_, reject) =>
+					setTimeout(
+						() => reject(new Error('Timed out waiting for the live Organizer snapshot.')),
+						1_000
+					)
+				)
+			]);
+			expect(result.value).toMatchObject({ activeBallotCount: 1 });
+		} finally {
+			controller.abort();
+			await stream.return(undefined);
+		}
 	});
 
 	it('reads individual and list Organizer projections from one repeatable-read snapshot', async () => {
