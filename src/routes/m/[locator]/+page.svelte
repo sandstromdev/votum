@@ -116,8 +116,6 @@
 			<p class="font-medium">{projection.vote.title}</p>
 			<ClosedVoteResult {projection} />
 			<ParticipationBar
-				current={projection.participation.current}
-				expected={projection.participation.expected}
 				{checking}
 				liveStatus={liveUnavailable
 					? 'Liveuppdateringen fungerar inte just nu. Sidan hämtar nya uppgifter automatiskt.'
@@ -132,8 +130,6 @@
 	{#key projection.activeVoteKey}
 		<ParticipantVote {publicLocator} meetingTitle={projection.meeting.title} {projection}>
 			<ParticipationBar
-				current={projection.participation.current}
-				expected={projection.participation.expected}
 				{checking}
 				liveStatus={liveUnavailable
 					? 'Liveuppdateringen fungerar inte just nu. Sidan hämtar nya uppgifter automatiskt.'

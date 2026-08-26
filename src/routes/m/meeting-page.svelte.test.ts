@@ -311,6 +311,7 @@ it('shows the active Vote presentation without future agenda details', async () 
 		}
 	});
 
+	await screen.getByRole('button', { name: 'Så här tas beslutet' }).click();
 	await expect
 		.element(
 			screen.getByText(
@@ -318,6 +319,7 @@ it('shows the active Vote presentation without future agenda details', async () 
 			)
 		)
 		.toBeVisible();
+
 	await expect.element(screen.getByText('För', { exact: true })).toBeVisible();
 	await expect.element(screen.getByText('Emot', { exact: true })).toBeVisible();
 	await expect.element(screen.getByText('Avstår', { exact: true })).toBeVisible();

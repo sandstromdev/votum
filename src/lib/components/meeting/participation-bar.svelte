@@ -2,16 +2,12 @@
 	import { Button } from '#lib/components/ui/button/index.js';
 
 	let {
-		current,
-		expected,
 		checking,
 		liveStatus,
 		onCheck,
 		errorMessage,
 		onReload
 	}: {
-		current?: number;
-		expected?: number | null;
 		checking: boolean;
 		liveStatus?: string | null;
 		onCheck: () => void;
@@ -21,19 +17,9 @@
 </script>
 
 <div
-	class={[
-		'mt-8 flex flex-col gap-4 border-t border-border pt-5 text-sm text-muted-foreground sm:flex-row sm:items-center',
-		current != null ? 'sm:justify-between' : 'sm:justify-end'
-	]}
+	class="mt-8 flex flex-col gap-4 border-t border-border pt-5 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
 >
-	{#if current != null}
-		{#if expected}
-			<span>{current} av {expected} deltagare</span>
-		{:else}
-			<span>{current} deltagare</span>
-		{/if}
-	{/if}
-	<Button type="button" variant="outline" size="sm" disabled={checking} onclick={onCheck}>
+	<Button type="button" variant="ghost" size="sm" disabled={checking} onclick={onCheck}>
 		{checking ? 'Kontrollerar' : 'Kontrollera uppdateringar'}
 	</Button>
 </div>

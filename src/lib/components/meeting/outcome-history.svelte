@@ -16,6 +16,7 @@
 		IconRefresh
 	} from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	let {
 		meeting
@@ -24,6 +25,7 @@
 	} = $props();
 
 	let busy = $state(false);
+	const loading = new SvelteSet<string>();
 
 	const invalidatedWithoutOutcome = $derived(
 		meeting.agenda.filter(
@@ -36,6 +38,7 @@
 	async function rerun(voteId: string) {
 		if (busy || !canRerun) return;
 		busy = true;
+		loading.add(voteId);
 		try {
 			await rerunVote({ meetingId: meeting.id, voteId, expectedRevision: meeting.revision });
 			await refreshAll();
@@ -43,6 +46,7 @@
 			toast.error('En ny omröstning kunde inte skapas. Uppdatera sidan och försök igen.');
 		} finally {
 			busy = false;
+			loading.delete(voteId);
 		}
 	}
 
@@ -228,6 +232,7 @@
 									size="sm"
 									disabled={busy}
 									onclick={() => rerun(entry.voteId)}
+									loading={loading.has(entry.voteId)}
 								>
 									<IconRefresh class="size-4" aria-hidden="true" />
 									Gör om
@@ -274,6 +279,7 @@
 								size="sm"
 								disabled={busy}
 								onclick={() => rerun(vote.id)}
+								loading={loading.has(vote.id)}
 							>
 								<IconRefresh class="size-4" aria-hidden="true" />
 								Gör om

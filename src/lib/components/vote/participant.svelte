@@ -63,7 +63,7 @@
 						size="icon"
 						variant="ghost"
 						class="ml-auto shrink-0"
-						aria-label="Information om hur beslutet tas"
+						aria-label="Så här tas beslutet"
 					>
 						<IconInfoCircle aria-hidden="true" />
 					</Button>
