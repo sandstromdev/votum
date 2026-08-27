@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends string">
-	import { buttonVariants } from '#lib/components/ui/button/button-base.svelte';
+	import { buttonVariants } from '#lib/components/ui/button/index.js';
 	import * as Field from '#lib/components/ui/field/index.js';
 	import * as RadioGroup from '#lib/components/ui/radio-group/index.js';
 	import { cn } from '#lib/utils.js';

@@ -1,0 +1,181 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"jsPlugins": ["@stylistic/eslint-plugin"],
+	"plugins": ["unicorn", "typescript", "oxc", "import", "vitest"],
+	"options": {
+		"typeAware": false,
+		"typeCheck": false
+	},
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn"
+	},
+	"env": {
+		"builtin": true,
+		"browser": true,
+		"node": true
+	},
+	"rules": {
+		"no-else-return": [
+			"error",
+			{
+				"allowElseIf": true
+			}
+		],
+		"no-underscore-dangle": [
+			"error",
+			{
+				"allow": ["_password"]
+			}
+		],
+		"no-unused-vars": [
+			"error",
+			{
+				"args": "all",
+				"argsIgnorePattern": "^_",
+				"caughtErrors": "all",
+				"caughtErrorsIgnorePattern": "^_",
+				"destructuredArrayIgnorePattern": "^_",
+				"varsIgnorePattern": "^_",
+				"ignoreRestSiblings": true
+			}
+		],
+		"import/no-unassigned-import": [
+			"error",
+			{
+				"allow": ["**/*.css", "@fontsource-variable/*"]
+			}
+		],
+		"import/default": "warn",
+		"import/export": "warn",
+		"import/named": "warn",
+		"import/namespace": "warn",
+		"import/no-duplicates": "warn",
+		"import/no-named-as-default": "warn",
+		"import/no-named-as-default-member": "warn",
+		"import/newline-after-import": "error",
+		"oxc/no-map-spread": "error",
+		"typescript/ban-ts-comment": "error",
+		"typescript/await-thenable": "warn",
+		"typescript/consistent-type-imports": "warn",
+		"typescript/no-floating-promises": "warn",
+		"typescript/no-explicit-any": "error",
+		"typescript/no-misused-spread": "warn",
+		"typescript/no-non-null-assertion": "warn",
+		"typescript/no-deprecated": "error",
+		"typescript/promise-function-async": "error",
+		"typescript/prefer-ts-expect-error": "error",
+		"typescript/prefer-as-const": "warn",
+		"eslint/curly": ["warn", "all"],
+		"vitest/consistent-test-it": ["warn", { "fn": "it" }],
+		"vitest/consistent-vitest-vi": ["warn", { "fn": "vi" }],
+		"vitest/no-conditional-expect": "warn",
+		"vitest/no-disabled-tests": "error",
+		"vitest/expect-expect": "off",
+		"vitest/no-focused-tests": "error",
+		"vitest/no-identical-title": "error",
+		"vitest/no-standalone-expect": "error",
+		"vitest/require-mock-type-parameters": "off",
+		"vitest/require-to-throw-message": "off",
+		"unicorn/error-message": "error",
+		"unicorn/filename-case": [
+			"error",
+			{
+				"cases": {
+					"kebabCase": true
+				}
+			}
+		],
+		"unicorn/no-nested-ternary": "error",
+		"unicorn/no-unnecessary-await": "warn",
+		"unicorn/no-useless-collection-argument": "error",
+		"unicorn/no-useless-fallback-in-spread": "warn",
+		"unicorn/prefer-set-size": "warn",
+		"unicorn/prefer-string-starts-ends-with": "warn",
+		"@stylistic/padding-line-between-statements": [
+			"error",
+			{ "blankLine": "always", "prev": ["const", "let", "var"], "next": "*" },
+			{
+				"blankLine": "any",
+				"prev": ["const", "let", "var"],
+				"next": ["const", "let", "var"]
+			},
+			{ "blankLine": "always", "prev": "*", "next": ["return", "throw"] }
+		]
+	},
+	"ignorePatterns": [
+		"**/node_modules",
+		".svelte-kit",
+		"build",
+		"coverage",
+		".output",
+		".vercel",
+		".netlify",
+		".wrangler",
+		"test-results",
+		"**/.env",
+		"**/.env.*",
+		"!**/.env.example",
+		"!**/.env.test",
+		"**/vite.config.js.timestamp-*",
+		"**/vite.config.ts.timestamp-*"
+	],
+	"overrides": [
+		{
+			"files": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+			"rules": {
+				"constructor-super": "off",
+				"getter-return": "off",
+				"no-class-assign": "off",
+				"no-const-assign": "off",
+				"no-dupe-class-members": "off",
+				"no-dupe-keys": "off",
+				"no-func-assign": "off",
+				"no-import-assign": "off",
+				"no-new-native-nonconstructor": "off",
+				"no-obj-calls": "off",
+				"no-redeclare": "off",
+				"no-setter-return": "off",
+				"no-this-before-super": "off",
+				"no-unreachable": "off",
+				"no-unsafe-negation": "off",
+				"no-with": "off",
+				"no-var": "error",
+				"prefer-const": "error",
+				"prefer-rest-params": "error",
+				"prefer-spread": "error"
+			}
+		},
+		{
+			"files": ["**/*.svelte", "**/*.svelte.ts", "**/*.svelte.js"],
+			"globals": {
+				"$bindable": "readonly",
+				"$derived": "readonly",
+				"$effect": "readonly",
+				"$host": "readonly",
+				"$inspect": "readonly",
+				"$props": "readonly",
+				"$state": "readonly"
+			},
+			"rules": {
+				"no-inner-declarations": "off",
+				"no-self-assign": "off",
+				"typescript/consistent-type-imports": "off"
+			}
+		},
+		{
+			"files": ["src/lib/components/ui/**"],
+			"rules": {
+				"import/no-duplicates": "off",
+				"typescript/no-explicit-any": "off",
+				"unicorn/filename-case": "off"
+			}
+		},
+		{
+			"files": ["**/*.{spec,test}.{ts,js}", "**/*.svelte.{spec,test}.{ts,js}"],
+			"rules": {
+				"typescript/no-non-null-assertion": "off"
+			}
+		}
+	]
+}

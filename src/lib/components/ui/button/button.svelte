@@ -1,47 +1,8 @@
-<script lang="ts" module>
-	import type { MouseEventHandler } from 'svelte/elements';
-
-	export type ButtonProps = ButtonPrimitiveProps & {
-		loading?: boolean;
-		onClickPromise?: (
-			e:
-				| Parameters<MouseEventHandler<HTMLButtonElement>>[0]
-				| Parameters<MouseEventHandler<HTMLAnchorElement>>[0]
-		) => Promise<void>;
-	};
-
-	export type Size = 'default' | 'xs' | 'sm' | 'lg';
-
-	/** Maps a button size to its icon and text variants. */
-	export const sizeMap = {
-		default: {
-			icon: 'icon',
-			normal: 'default'
-		},
-		xs: {
-			icon: 'icon-xs',
-			normal: 'xs'
-		},
-		sm: {
-			icon: 'icon-sm',
-			normal: 'sm'
-		},
-		lg: {
-			icon: 'icon-lg',
-			normal: 'lg'
-		}
-	} as const;
-
-	export { type ButtonSize, type ButtonVariant } from '#lib/components/ui/button/index.js';
-</script>
-
 <script lang="ts">
-	import {
-		Base,
-		type ButtonProps as ButtonPrimitiveProps
-	} from '#lib/components/ui/button/index.js';
 	import { Spinner } from '#lib/components/ui/spinner/index.js';
 	import { cn } from '#lib/utils.js';
+	import Base from './button-base.svelte';
+	import type { ButtonProps } from './index.js';
 
 	let {
 		ref = $bindable(null),

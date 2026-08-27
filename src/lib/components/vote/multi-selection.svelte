@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { buttonVariants } from '#lib/components/ui/button/button-base.svelte';
+	import { buttonVariants } from '#lib/components/ui/button/index.js';
 	import Checkbox from '#lib/components/ui/checkbox/checkbox.svelte';
 	import * as Field from '#lib/components/ui/field/index.js';
 	import NumberField from '#lib/components/ui/number-field/number-field.svelte';
