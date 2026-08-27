@@ -10,16 +10,19 @@ import { selectionVoteConfig, vote } from './schema/vote.js';
 
 const CHECK_VIOLATION = '23514';
 const FOREIGN_KEY_VIOLATION = '23503';
+
 type DatabaseWriter = Pick<typeof db, 'insert'>;
 
 async function insertOrganizer(tx: DatabaseWriter) {
 	const id = randomUUID();
+
 	await tx.insert(user).values({
 		id,
 		name: 'Organizer',
 		email: `${id}@example.test`,
 		emailVerified: true
 	});
+
 	return id;
 }
 
@@ -34,6 +37,7 @@ async function insertMeeting(
 	}> = {}
 ) {
 	const id = overrides.id ?? randomUUID();
+
 	await tx.insert(meeting).values({
 		id,
 		organizerUserId,
@@ -43,11 +47,13 @@ async function insertMeeting(
 		openedAt: overrides.openedAt,
 		closedAt: overrides.closedAt
 	});
+
 	return id;
 }
 
 async function insertVote(tx: DatabaseWriter, meetingId: string) {
 	const id = randomUUID();
+
 	await tx.insert(vote).values({
 		id,
 		meetingId,
@@ -55,10 +61,11 @@ async function insertVote(tx: DatabaseWriter, meetingId: string) {
 		title: 'Beslut',
 		kind: 'decision'
 	});
+
 	return id;
 }
 
-function expectSqlState(work: Promise<unknown>, code: string) {
+async function expectSqlState(work: Promise<unknown>, code: string) {
 	return expect(work).rejects.toSatisfy((error) => sqlState(error) === code);
 }
 
@@ -78,6 +85,7 @@ describe('database lifecycle constraints', () => {
 			await expectSqlState(
 				db.transaction(async (tx) => {
 					const organizerUserId = await insertOrganizer(tx);
+
 					await insertMeeting(tx, organizerUserId, values);
 				}),
 				CHECK_VIOLATION
@@ -90,6 +98,7 @@ describe('database lifecycle constraints', () => {
 			db.transaction(async (tx) => {
 				const organizerUserId = await insertOrganizer(tx);
 				const meetingId = await insertMeeting(tx, organizerUserId);
+
 				await tx.insert(vote).values({
 					id: randomUUID(),
 					meetingId,
@@ -108,6 +117,7 @@ describe('database lifecycle constraints', () => {
 			db.transaction(async (tx) => {
 				const organizerUserId = await insertOrganizer(tx);
 				const meetingId = await insertMeeting(tx, organizerUserId);
+
 				await tx.insert(vote).values({
 					id: randomUUID(),
 					meetingId,

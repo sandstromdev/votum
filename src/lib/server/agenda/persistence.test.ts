@@ -32,9 +32,11 @@ describe('Agenda persistence', () => {
 			title: 'Ofullständig agenda',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		const voteId = uuidv7();
+
 		await sql`
 			INSERT INTO vote (id, meeting_id, position, title, kind)
 			VALUES (${voteId}, ${created.id}, 0, 'Saknad konfiguration', 'decision')

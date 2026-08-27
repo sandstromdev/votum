@@ -15,7 +15,11 @@ function getTokenEncryptionKey() {
 	const secret =
 		BETTER_AUTH_SECRET ||
 		(process.env.NODE_ENV === 'test' ? 'votum-test-initial-submission-token-secret' : undefined);
-	if (!secret) throw new Error('BETTER_AUTH_SECRET is required for initial Ballot retries.');
+
+	if (!secret) {
+		throw new Error('BETTER_AUTH_SECRET is required for initial Ballot retries.');
+	}
+
 	return createHash('sha256').update(secret).digest();
 }
 
@@ -24,11 +28,13 @@ export function encryptParticipantToken(rawParticipantToken: string) {
 	const cipher = createCipheriv('aes-256-gcm', getTokenEncryptionKey(), iv);
 	const ciphertext = Buffer.concat([cipher.update(rawParticipantToken, 'utf8'), cipher.final()]);
 	const authTag = cipher.getAuthTag();
+
 	return [iv, authTag, ciphertext].map((part) => part.toString('base64url')).join('.');
 }
 
 export function decryptParticipantToken(ciphertext: string) {
 	const [ivEncoded, authTagEncoded, encryptedTokenEncoded] = ciphertext.split('.');
+
 	if (!ivEncoded || !authTagEncoded || !encryptedTokenEncoded) {
 		throw new Error('Invalid encrypted Participant token.');
 	}
@@ -38,7 +44,9 @@ export function decryptParticipantToken(ciphertext: string) {
 		getTokenEncryptionKey(),
 		Buffer.from(ivEncoded, 'base64url')
 	);
+
 	decipher.setAuthTag(Buffer.from(authTagEncoded, 'base64url'));
+
 	return Buffer.concat([
 		decipher.update(Buffer.from(encryptedTokenEncoded, 'base64url')),
 		decipher.final()
@@ -64,7 +72,7 @@ function canonicalInitialSubmissionPayload(payload: unknown) {
 
 	return {
 		...payload,
-		selectedOptionIds: [...payload.selectedOptionIds].sort()
+		selectedOptionIds: [...payload.selectedOptionIds].toSorted()
 	};
 }
 

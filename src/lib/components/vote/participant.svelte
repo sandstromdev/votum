@@ -39,13 +39,16 @@
 		needsRefresh = true;
 	}
 
-	const infoText = $derived(
-		vote.kind === 'decision'
-			? vote.decision.majorityLabel
-			: vote.selection.positionCount > 1
-				? `De ${vote.selection.positionCount} förslag som får flest röster vinner.`
-				: 'Det förslag som får flest röster vinner.'
-	);
+	const infoText = $derived.by(() => {
+		if (vote.kind === 'decision') {
+			return vote.decision.majorityLabel;
+		}
+		if (vote.selection.positionCount > 1) {
+			return `De ${vote.selection.positionCount} förslag som får flest röster vinner.`;
+		}
+
+		return 'Det förslag som får flest röster vinner.';
+	});
 </script>
 
 <CardPage class="max-w-lg" aria-labelledby={titleId}>

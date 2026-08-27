@@ -1,12 +1,15 @@
 import type { ActionResult, OperationName, Sample } from './types.js';
 
-export function sleep(milliseconds: number) {
+export async function sleep(milliseconds: number) {
 	return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
 
 export async function sleepUntil(timestamp: number) {
 	const remaining = timestamp - Date.now();
-	if (remaining > 0) await sleep(remaining);
+
+	if (remaining > 0) {
+		await sleep(remaining);
+	}
 }
 
 export function errorMessage(error: unknown) {
@@ -19,13 +22,16 @@ export async function measure<T>(
 	action: () => Promise<T>
 ): Promise<ActionResult<T>> {
 	const startedAt = performance.now();
+
 	try {
 		const value = await action();
+
 		samples.push({
 			operation,
 			durationMs: Math.round(performance.now() - startedAt),
 			outcome: 'success'
 		});
+
 		return { outcome: 'success', value };
 	} catch (error) {
 		samples.push({
@@ -34,6 +40,7 @@ export async function measure<T>(
 			outcome: 'failure',
 			error: errorMessage(error)
 		});
+
 		return { outcome: 'failure', error };
 	}
 }
@@ -44,7 +51,11 @@ export async function measureOrThrow<T>(
 	action: () => Promise<T>
 ) {
 	const result = await measure(samples, operation, action);
-	if (result.outcome === 'failure') throw result.error;
+
+	if (result.outcome === 'failure') {
+		throw result.error;
+	}
+
 	return result.value;
 }
 
@@ -55,6 +66,7 @@ export async function runScheduled<T>(
 	position: 'endpoints' | 'gaps' = 'gaps'
 ) {
 	const startedAt = Date.now();
+
 	await Promise.all(
 		items.map(async (item, index) => {
 			const scheduledOffset =
@@ -62,6 +74,7 @@ export async function runScheduled<T>(
 					? Math.round((durationMs * index) / Math.max(1, items.length - 1))
 					: Math.round((durationMs * (index + 1)) / (items.length + 1));
 			const scheduledAt = startedAt + scheduledOffset;
+
 			await sleepUntil(scheduledAt);
 			await action(item, index);
 		})

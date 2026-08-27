@@ -11,11 +11,17 @@
 	const maxSelected = $derived(selection.positionCount - (vacancyCount ?? 0));
 
 	function isDisabled(optionId: string) {
-		if (abstain) return true;
+		if (abstain) {
+			return true;
+		}
 
-		if (selected.has(optionId)) return false;
+		if (selected.has(optionId)) {
+			return false;
+		}
 
-		if (selected.size < maxSelected) return false;
+		if (selected.size < maxSelected) {
+			return false;
+		}
 
 		return true;
 	}

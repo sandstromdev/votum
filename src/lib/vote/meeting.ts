@@ -136,3 +136,9 @@ export type ParticipantPageProjection =
 	| (Extract<ParticipantProjection, { state: 'active' }> & {
 			currentBallot: ParticipantBallot | null;
 	  });
+
+export const LIFECYCLE_LABELS: Record<MeetingLifecycle, string> = {
+	draft: 'Inte öppnat',
+	open: 'Öppet',
+	closed: 'Avslutat'
+};

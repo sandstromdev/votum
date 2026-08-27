@@ -7,9 +7,16 @@
 
 	type Option = { value: string | 'vacant' | 'abstain'; label: string };
 
-	const currentValue = $derived(
-		vacancyCount > 0 ? 'vacant' : abstain ? 'abstain' : [...selected.values()][0]
-	);
+	const currentValue = $derived.by(() => {
+		if (vacancyCount > 0) {
+			return 'vacant';
+		}
+		if (abstain) {
+			return 'abstain';
+		}
+
+		return [...selected.values()][0];
+	});
 
 	const options = $derived<Option[]>([
 		...selection.options.map((option) => ({ value: option.id, label: option.label })),

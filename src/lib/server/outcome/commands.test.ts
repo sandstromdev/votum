@@ -41,13 +41,19 @@ describe('Vote outcomes', () => {
 
 	function rememberActiveVote(publicLocator: string, voteId: string) {
 		const activeVoteKey = createActiveVoteKey(voteId);
+
 		activeVoteKeys.set(publicLocator, activeVoteKey);
+
 		return activeVoteKey;
 	}
 
 	function currentActiveVoteKey(publicLocator: string) {
 		const activeVoteKey = activeVoteKeys.get(publicLocator);
-		if (!activeVoteKey) throw new Error('Expected the test fixture to have an active Vote');
+
+		if (!activeVoteKey) {
+			throw new Error('Expected the test fixture to have an active Vote');
+		}
+
 		return activeVoteKey;
 	}
 
@@ -82,6 +88,7 @@ describe('Vote outcomes', () => {
 			title: 'Årsmöte',
 			expectedParticipantCount: 12
 		});
+
 		context.trackMeetings(meeting.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -94,10 +101,14 @@ describe('Vote outcomes', () => {
 			majorityRule,
 			abstentionsCounted
 		});
-		if (!vote) throw new Error('Expected a Decision Vote');
+
+		if (!vote) {
+			throw new Error('Expected a Decision Vote');
+		}
 		await openMeeting({ organizerUserId, meetingId: meeting.id });
 		await activateVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 		rememberActiveVote(meeting.publicLocator, vote.id);
+
 		return { organizerUserId, meeting, vote };
 	}
 
@@ -112,6 +123,7 @@ describe('Vote outcomes', () => {
 			title: 'Valmöte',
 			expectedParticipantCount: 12
 		});
+
 		context.trackMeetings(meeting.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -122,11 +134,15 @@ describe('Vote outcomes', () => {
 			vacancyEnabled,
 			options
 		});
-		if (!vote || vote.kind !== 'selection') throw new Error('Expected a Selection Vote');
+
+		if (!vote || vote.kind !== 'selection') {
+			throw new Error('Expected a Selection Vote');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: meeting.id });
 		await activateVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 		rememberActiveVote(meeting.publicLocator, vote.id);
+
 		return { organizerUserId, meeting, vote };
 	}
 
@@ -136,7 +152,10 @@ describe('Vote outcomes', () => {
 	}: { positionCount?: number; vacancyCount?: number } = {}) {
 		const active = await createActiveSelectionVote({ positionCount });
 		const [ada] = active.vote.selection.options;
-		if (!ada) throw new Error('Expected a Selection option');
+
+		if (!ada) {
+			throw new Error('Expected a Selection option');
+		}
 		await selectionBallot(active.meeting.publicLocator, {
 			selectedOptionIds: [ada.id],
 			vacancyCount,
@@ -147,12 +166,14 @@ describe('Vote outcomes', () => {
 			meetingId: active.meeting.id,
 			voteId: active.vote.id
 		});
+
 		return { ...active, ada };
 	}
 
 	describe('closing and revealing Votes', () => {
 		it('closes a Decision Vote into an organizer-only aggregate snapshot', async () => {
 			const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
+
 			await decisionBallot(meeting.publicLocator, 'support');
 			await decisionBallot(meeting.publicLocator, 'support');
 			await decisionBallot(meeting.publicLocator, 'oppose');
@@ -195,6 +216,7 @@ describe('Vote outcomes', () => {
 
 		it('reveals only the final result and keeps the snapshot fixed', async () => {
 			const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
+
 			await decisionBallot(meeting.publicLocator, 'support');
 			await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 
@@ -203,6 +225,7 @@ describe('Vote outcomes', () => {
 				meetingId: meeting.id,
 				voteId: vote.id
 			});
+
 			expect(revealed?.agenda[0]).toMatchObject({ lifecycle: 'closed', revealed: true });
 			expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
 				state: 'closed',
@@ -229,6 +252,7 @@ describe('Vote outcomes', () => {
 
 		it('publishes the optional aggregate breakdown without changing the final result', async () => {
 			const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
+
 			await decisionBallot(meeting.publicLocator, 'support');
 			await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 			await revealVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
@@ -252,12 +276,14 @@ describe('Vote outcomes', () => {
 				voteId: vote.id,
 				enabled: true
 			});
+
 			expect(unchanged?.revision).toBe(enabled?.revision);
 			expect(unchanged?.agenda[0]).toMatchObject({ publicResultBreakdownEnabled: true });
 			const afterBreakdown = await getOrganizerMeetingByLocator({
 				organizerUserId,
 				publicLocator: meeting.publicLocator
 			});
+
 			expect(JSON.stringify(afterBreakdown?.agenda[0]?.outcome?.document)).toBe(
 				snapshotBeforeBreakdown
 			);
@@ -285,6 +311,7 @@ describe('Vote outcomes', () => {
 				voteId: vote.id,
 				enabled: false
 			});
+
 			expect(disabled?.agenda[0]).toMatchObject({ publicResultBreakdownEnabled: false });
 			expect(await getParticipantProjection(meeting.publicLocator)).not.toMatchObject({
 				result: { breakdown: expect.anything() }
@@ -293,6 +320,7 @@ describe('Vote outcomes', () => {
 			const snapshotBeforeSettingsChange = JSON.stringify(
 				afterBreakdown?.agenda[0]?.outcome?.document
 			);
+
 			expect(afterBreakdown?.agenda[0]?.outcome?.document.expectedParticipantCount).toBe(12);
 			await updateMeetingSettings({
 				organizerUserId,
@@ -303,6 +331,7 @@ describe('Vote outcomes', () => {
 				organizerUserId,
 				publicLocator: meeting.publicLocator
 			});
+
 			expect(afterSettingsChange?.agenda[0]?.outcome?.document.expectedParticipantCount).toBe(12);
 			expect(JSON.stringify(afterSettingsChange?.agenda[0]?.outcome?.document)).toBe(
 				snapshotBeforeSettingsChange
@@ -321,6 +350,7 @@ describe('Vote outcomes', () => {
 
 			for (const testCase of cases) {
 				const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
+
 				for (const choice of testCase.choices) {
 					await decisionBallot(meeting.publicLocator, choice);
 				}
@@ -355,12 +385,14 @@ describe('Vote outcomes', () => {
 				majorityRule: 'qualified',
 				abstentionsCounted: true
 			});
+
 			await decisionBallot(meeting.publicLocator, 'support');
 			await decisionBallot(meeting.publicLocator, 'support');
 			await decisionBallot(meeting.publicLocator, 'oppose');
 			await decisionBallot(meeting.publicLocator, 'abstention');
 
 			const closed = await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
+
 			expect(closed?.agenda[0]?.outcome?.document).toMatchObject({
 				version: 2,
 				vote: { decision: { majorityRule: 'qualified', abstentionsCounted: true } },
@@ -405,6 +437,7 @@ describe('Vote outcomes', () => {
 			FROM outcome_snapshot
 			WHERE vote_id = ${vote.id}
 		`;
+
 			expect(snapshot.document).toMatchObject({ ballotCount: 0, expectedParticipantCount: 12 });
 		});
 
@@ -415,6 +448,7 @@ describe('Vote outcomes', () => {
 				title: 'Valmöte',
 				expectedParticipantCount: null
 			});
+
 			context.trackMeetings(meeting.id);
 			const vote = await addDraftVote({
 				organizerUserId,
@@ -424,12 +458,18 @@ describe('Vote outcomes', () => {
 				positionCount: 1,
 				options: ['Ada', 'Bo']
 			});
-			if (!vote || vote.kind !== 'selection') throw new Error('Expected a Selection Vote');
+
+			if (!vote || vote.kind !== 'selection') {
+				throw new Error('Expected a Selection Vote');
+			}
 			await openMeeting({ organizerUserId, meetingId: meeting.id });
 			await activateVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 			rememberActiveVote(meeting.publicLocator, vote.id);
 			const ada = vote.selection.options[0];
-			if (!ada) throw new Error('Expected a Selection option');
+
+			if (!ada) {
+				throw new Error('Expected a Selection option');
+			}
 			await selectionBallot(meeting.publicLocator, {
 				selectedOptionIds: [ada.id],
 				vacancyCount: 0,
@@ -442,6 +482,7 @@ describe('Vote outcomes', () => {
 			});
 
 			const closed = await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
+
 			expect(closed?.agenda[0]?.outcome?.document).toMatchObject({
 				ballotCount: 2,
 				counts: {
@@ -463,6 +504,7 @@ describe('Vote outcomes', () => {
 				title: 'Valmöte',
 				expectedParticipantCount: null
 			});
+
 			context.trackMeetings(meeting.id);
 			const vote = await addDraftVote({
 				organizerUserId,
@@ -472,12 +514,18 @@ describe('Vote outcomes', () => {
 				positionCount: 1,
 				options: ['Ada', 'Bo']
 			});
-			if (!vote || vote.kind !== 'selection') throw new Error('Expected a Selection Vote');
+
+			if (!vote || vote.kind !== 'selection') {
+				throw new Error('Expected a Selection Vote');
+			}
 			await openMeeting({ organizerUserId, meetingId: meeting.id });
 			await activateVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 			rememberActiveVote(meeting.publicLocator, vote.id);
 			const ada = vote.selection.options[0];
-			if (!ada) throw new Error('Expected a Selection option');
+
+			if (!ada) {
+				throw new Error('Expected a Selection option');
+			}
 			await selectionBallot(meeting.publicLocator, {
 				selectedOptionIds: [ada.id],
 				vacancyCount: 0,
@@ -499,6 +547,7 @@ describe('Vote outcomes', () => {
 			});
 
 			const projection = await getParticipantProjection(meeting.publicLocator);
+
 			expect(projection).toMatchObject({
 				state: 'closed',
 				result: {
@@ -525,6 +574,7 @@ describe('Vote outcomes', () => {
 				title: 'Valmöte',
 				expectedParticipantCount: null
 			});
+
 			context.trackMeetings(meeting.id);
 			const vote = await addDraftVote({
 				organizerUserId,
@@ -534,14 +584,19 @@ describe('Vote outcomes', () => {
 				positionCount: 2,
 				options: ['Ada', 'Bo', 'Cleo']
 			});
-			if (!vote || vote.kind !== 'selection')
+
+			if (!vote || vote.kind !== 'selection') {
 				throw new Error('Expected a Multi-winner Selection Vote');
+			}
 
 			await openMeeting({ organizerUserId, meetingId: meeting.id });
 			await activateVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 			rememberActiveVote(meeting.publicLocator, vote.id);
 			const [ada, bo, cleo] = vote.selection.options;
-			if (!ada || !bo || !cleo) throw new Error('Expected three Selection options');
+
+			if (!ada || !bo || !cleo) {
+				throw new Error('Expected three Selection options');
+			}
 			await selectionBallot(meeting.publicLocator, {
 				selectedOptionIds: [ada.id, bo.id],
 				vacancyCount: 0,
@@ -554,6 +609,7 @@ describe('Vote outcomes', () => {
 			});
 
 			const closed = await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
+
 			expect(closed?.agenda[0]?.outcome?.document).toMatchObject({
 				counts: {
 					options: [
@@ -581,7 +637,10 @@ describe('Vote outcomes', () => {
 				positionCount: 2
 			});
 			const [ada, bo] = vote.selection.options;
-			if (!ada || !bo) throw new Error('Expected two Selection options');
+
+			if (!ada || !bo) {
+				throw new Error('Expected two Selection options');
+			}
 
 			await selectionBallot(meeting.publicLocator, {
 				selectedOptionIds: [ada.id, bo.id],
@@ -598,6 +657,7 @@ describe('Vote outcomes', () => {
 			await revealVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 
 			const projection = await getParticipantProjection(meeting.publicLocator);
+
 			expect(projection).toMatchObject({
 				state: 'closed',
 				result: {
@@ -623,6 +683,7 @@ describe('Vote outcomes', () => {
 				title: 'Valmöte',
 				expectedParticipantCount: null
 			});
+
 			context.trackMeetings(meeting.id);
 			const vote = await addDraftVote({
 				organizerUserId,
@@ -633,12 +694,18 @@ describe('Vote outcomes', () => {
 				vacancyEnabled: true,
 				options: ['Ada', 'Bo']
 			});
-			if (!vote || vote.kind !== 'selection') throw new Error('Expected a Selection Vote');
+
+			if (!vote || vote.kind !== 'selection') {
+				throw new Error('Expected a Selection Vote');
+			}
 			await openMeeting({ organizerUserId, meetingId: meeting.id });
 			await activateVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 			rememberActiveVote(meeting.publicLocator, vote.id);
 			const ada = vote.selection.options[0];
-			if (!ada) throw new Error('Expected a Selection option');
+
+			if (!ada) {
+				throw new Error('Expected a Selection option');
+			}
 			await selectionBallot(meeting.publicLocator, {
 				selectedOptionIds: [ada.id],
 				vacancyCount: 0,
@@ -656,6 +723,7 @@ describe('Vote outcomes', () => {
 			});
 
 			const closed = await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
+
 			expect(closed?.agenda[0]?.outcome?.document).toMatchObject({
 				counts: { vacancy: 1, abstention: 1 },
 				outcome: { state: 'winner', winner: { type: 'option', label: 'Ada' } }
@@ -670,7 +738,10 @@ describe('Vote outcomes', () => {
 				options: ['Ada', 'Bo', 'Cleo']
 			});
 			const [ada] = vote.selection.options;
-			if (!ada) throw new Error('Expected a Selection option');
+
+			if (!ada) {
+				throw new Error('Expected a Selection option');
+			}
 			await selectionBallot(meeting.publicLocator, {
 				selectedOptionIds: [ada.id],
 				vacancyCount: 0,
@@ -682,6 +753,7 @@ describe('Vote outcomes', () => {
 				organizerUserId,
 				publicLocator: meeting.publicLocator
 			});
+
 			expect(closed?.agenda[0]?.outcome?.document.outcome).toMatchObject({ state: 'incomplete' });
 			expect(
 				await revealVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id })
@@ -694,6 +766,7 @@ describe('Vote outcomes', () => {
 				voteId: vote.id,
 				resolutionType: 'accept'
 			});
+
 			expect(accepted?.agenda[0]).toMatchObject({ resolution: { type: 'accept' } });
 			expect(accepted?.agenda[0]?.outcome?.document.outcome).toMatchObject({ state: 'incomplete' });
 			expect(accepted?.outcomeHistory[0]).toMatchObject({
@@ -706,6 +779,7 @@ describe('Vote outcomes', () => {
 				voteId: vote.id,
 				resolutionType: 'vacancy'
 			});
+
 			expect(changed?.agenda[0]).toMatchObject({ resolution: { type: 'vacancy' } });
 
 			const revealed = await revealVote({
@@ -713,6 +787,7 @@ describe('Vote outcomes', () => {
 				meetingId: meeting.id,
 				voteId: vote.id
 			});
+
 			expect(revealed?.agenda[0]).toMatchObject({
 				revealed: true,
 				resolution: { type: 'vacancy' }
@@ -733,7 +808,10 @@ describe('Vote outcomes', () => {
 				options: ['Ada', 'Bo', 'Cleo']
 			});
 			const [ada] = vote.selection.options;
-			if (!ada) throw new Error('Expected a Selection option');
+
+			if (!ada) {
+				throw new Error('Expected a Selection option');
+			}
 			await selectionBallot(meeting.publicLocator, {
 				selectedOptionIds: [ada.id],
 				vacancyCount: 1,
@@ -748,7 +826,10 @@ describe('Vote outcomes', () => {
 				resolutionType: 'vacancy'
 			});
 			const counts = resolved?.agenda[0]?.outcome?.document.counts;
-			if (!counts || !('options' in counts)) throw new Error('Expected Selection counts');
+
+			if (!counts || !('options' in counts)) {
+				throw new Error('Expected Selection counts');
+			}
 			expect(counts.options.find(({ id }) => id === ada.id)).toMatchObject({ count: 1 });
 			expect(counts.vacancy).toBe(1);
 			expect(counts.abstention).toBe(0);
@@ -801,7 +882,10 @@ describe('Vote outcomes', () => {
 				voteId: vote.id
 			});
 			const rerun = rerunMeeting?.agenda.find(({ rerunOfVoteId }) => rerunOfVoteId === vote.id);
-			if (!rerun) throw new Error('Expected the Incomplete Vote Rerun');
+
+			if (!rerun) {
+				throw new Error('Expected the Incomplete Vote Rerun');
+			}
 			expect(rerun).toMatchObject({ lifecycle: 'draft', outcome: null, revealed: false });
 			expect(originalBeforeRerun?.agenda.find(({ id }) => id === vote.id)).toMatchObject({
 				id: vote.id,
@@ -826,6 +910,7 @@ describe('Vote outcomes', () => {
 				voteId: vote.id,
 				resolutionType: 'accept'
 			});
+
 			expect(accepted?.agenda[0]?.resolution).toMatchObject({ type: 'accept' });
 
 			const reread = await getOrganizerMeetingByLocator({
@@ -833,8 +918,11 @@ describe('Vote outcomes', () => {
 				publicLocator: meeting.publicLocator
 			});
 			const rereadVote = reread?.agenda.find(({ id }) => id === vote.id);
+
 			expect(rereadVote?.resolution).toMatchObject({ type: 'accept' });
-			if (!rereadVote?.resolution) throw new Error('Expected a persisted resolution');
+			if (!rereadVote?.resolution) {
+				throw new Error('Expected a persisted resolution');
+			}
 			expect(Number.isNaN(Date.parse(rereadVote.resolution.resolvedAt))).toBe(false);
 
 			const revealed = await revealVote({
@@ -842,6 +930,7 @@ describe('Vote outcomes', () => {
 				meetingId: meeting.id,
 				voteId: vote.id
 			});
+
 			expect(revealed?.agenda[0]).toMatchObject({ revealed: true, resolution: { type: 'accept' } });
 
 			await setPublicResultBreakdown({
@@ -851,6 +940,7 @@ describe('Vote outcomes', () => {
 				enabled: true
 			});
 			const participant = await getParticipantProjection(meeting.publicLocator);
+
 			expect(participant).toMatchObject({
 				state: 'closed',
 				result: {
@@ -880,6 +970,7 @@ describe('Vote outcomes', () => {
 			expect(JSON.stringify(participant)).not.toContain('resolution');
 
 			const presentation = await getPresentationProjection(meeting.publicLocator);
+
 			expect(JSON.stringify(presentation)).not.toContain('resolution');
 			expect(await endMeeting({ organizerUserId, meetingId: meeting.id })).toMatchObject({
 				lifecycle: 'closed'
@@ -932,6 +1023,7 @@ describe('Vote outcomes', () => {
 			).toBeNull();
 
 			const noResult = await createActiveSelectionVote({ positionCount: 2 });
+
 			await closeVote({
 				organizerUserId: noResult.organizerUserId,
 				meetingId: noResult.meeting.id,
@@ -954,6 +1046,7 @@ describe('Vote outcomes', () => {
 				title: 'Valmöte',
 				expectedParticipantCount: 12
 			});
+
 			context.trackMeetings(meeting.id);
 			const firstVote = await addDraftVote({
 				organizerUserId,
@@ -971,13 +1064,15 @@ describe('Vote outcomes', () => {
 				positionCount: 2,
 				options: ['Cia', 'Dora']
 			});
+
 			if (
 				!firstVote ||
 				!secondVote ||
 				firstVote.kind !== 'selection' ||
 				secondVote.kind !== 'selection'
-			)
+			) {
 				throw new Error('Expected two Selection Votes');
+			}
 
 			await openMeeting({ organizerUserId, meetingId: meeting.id });
 			await activateVote({ organizerUserId, meetingId: meeting.id, voteId: firstVote.id });
@@ -1037,9 +1132,15 @@ describe('Vote outcomes', () => {
 			).toBeNull();
 
 			const second = await rerunVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
-			if (!second) throw new Error('Expected an invalidated Vote to be rerunnable');
+
+			if (!second) {
+				throw new Error('Expected an invalidated Vote to be rerunnable');
+			}
 			const rerun = second.agenda.find(({ rerunOfVoteId }) => rerunOfVoteId === vote.id);
-			if (!rerun) throw new Error('Expected the Rerun to be linked to its source');
+
+			if (!rerun) {
+				throw new Error('Expected the Rerun to be linked to its source');
+			}
 			await activateVote({ organizerUserId, meetingId: meeting.id, voteId: rerun.id });
 			await closeVote({ organizerUserId, meetingId: meeting.id, voteId: rerun.id });
 			await revealVote({ organizerUserId, meetingId: meeting.id, voteId: rerun.id });
@@ -1054,6 +1155,7 @@ describe('Vote outcomes', () => {
 			).toBeNull();
 
 			const closedSource = await createActiveDecisionVote();
+
 			await closeVote({
 				organizerUserId: closedSource.organizerUserId,
 				meetingId: closedSource.meeting.id,
@@ -1065,6 +1167,7 @@ describe('Vote outcomes', () => {
 				voteId: closedSource.vote.id,
 				reason: 'Stängningen följde fel ordning.'
 			});
+
 			expect(invalidatedClosed?.agenda[0]).toMatchObject({ lifecycle: 'invalidated' });
 			expect(invalidatedClosed?.agenda[0]?.outcome?.document.ballotCount).toBe(0);
 			expect(
@@ -1078,12 +1181,19 @@ describe('Vote outcomes', () => {
 
 		it('does not create a Rerun while another Vote is active', async () => {
 			const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
+
 			await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 
 			const created = await rerunVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
-			if (!created) throw new Error('Expected the first Rerun');
+
+			if (!created) {
+				throw new Error('Expected the first Rerun');
+			}
 			const rerun = created.agenda.find(({ rerunOfVoteId }) => rerunOfVoteId === vote.id);
-			if (!rerun) throw new Error('Expected the Rerun to point to its source');
+
+			if (!rerun) {
+				throw new Error('Expected the Rerun to point to its source');
+			}
 
 			await activateVote({ organizerUserId, meetingId: meeting.id, voteId: rerun.id });
 
@@ -1102,6 +1212,7 @@ describe('Vote outcomes', () => {
 
 		it('rejects Vote invalidation, Reruns, and public breakdown changes after Meeting close', async () => {
 			const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
+
 			await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 			await endMeeting({ organizerUserId, meetingId: meeting.id });
 
@@ -1134,6 +1245,7 @@ describe('Vote outcomes', () => {
 				vacancyEnabled: true,
 				options: ['Ada', 'Bo', 'Cleo']
 			});
+
 			await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 
 			const rerunMeeting = await rerunVote({
@@ -1141,9 +1253,15 @@ describe('Vote outcomes', () => {
 				meetingId: meeting.id,
 				voteId: vote.id
 			});
-			if (!rerunMeeting) throw new Error('Expected a Selection Rerun');
+
+			if (!rerunMeeting) {
+				throw new Error('Expected a Selection Rerun');
+			}
 			const rerun = rerunMeeting.agenda.find(({ rerunOfVoteId }) => rerunOfVoteId === vote.id);
-			if (!rerun || rerun.kind !== 'selection') throw new Error('Expected a Selection Rerun');
+
+			if (!rerun || rerun.kind !== 'selection') {
+				throw new Error('Expected a Selection Rerun');
+			}
 
 			expect(rerun).toMatchObject({
 				lifecycle: 'draft',
@@ -1171,6 +1289,7 @@ describe('Vote outcomes', () => {
 				majorityRule: 'qualified',
 				abstentionsCounted: true
 			});
+
 			await decisionBallot(meeting.publicLocator, 'support');
 			await closeVote({ organizerUserId, meetingId: meeting.id, voteId: vote.id });
 
@@ -1179,12 +1298,17 @@ describe('Vote outcomes', () => {
 				meetingId: meeting.id,
 				voteId: vote.id
 			});
-			if (!firstRerunMeeting) throw new Error('Expected the first Rerun');
+
+			if (!firstRerunMeeting) {
+				throw new Error('Expected the first Rerun');
+			}
 			const firstRerun = firstRerunMeeting.agenda.find(
 				({ rerunOfVoteId }) => rerunOfVoteId === vote.id
 			);
-			if (!firstRerun || firstRerun.kind !== 'decision')
+
+			if (!firstRerun || firstRerun.kind !== 'decision') {
 				throw new Error('Expected a Decision Rerun');
+			}
 			expect(firstRerun).toMatchObject({
 				lifecycle: 'draft',
 				revealed: false,
@@ -1202,16 +1326,23 @@ describe('Vote outcomes', () => {
 				meetingId: meeting.id,
 				voteId: firstRerun.id
 			});
-			if (!secondRerunMeeting) throw new Error('Expected a chained Rerun');
+
+			if (!secondRerunMeeting) {
+				throw new Error('Expected a chained Rerun');
+			}
 			const secondRerun = secondRerunMeeting.agenda.find(
 				({ rerunOfVoteId }) => rerunOfVoteId === firstRerun.id
 			);
-			if (!secondRerun) throw new Error('Expected the second Rerun to point to the first');
+
+			if (!secondRerun) {
+				throw new Error('Expected the second Rerun to point to the first');
+			}
 
 			const organizer = await getOrganizerMeetingByLocator({
 				organizerUserId,
 				publicLocator: meeting.publicLocator
 			});
+
 			expect(organizer?.outcomeHistory).toEqual([
 				expect.objectContaining({
 					voteId: firstRerun.id,

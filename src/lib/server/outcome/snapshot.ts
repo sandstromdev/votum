@@ -1,5 +1,5 @@
 import { eq, inArray } from 'drizzle-orm';
-import z from 'zod';
+import { z } from 'zod';
 import { ballot } from '#lib/server/db/schema/participation.js';
 import { outcomeSnapshot } from '#lib/server/db/schema/outcome.js';
 import type { OrganizerVote } from '#lib/vote/agenda.js';
@@ -135,7 +135,9 @@ function getDecisionOutcome(
 	counts: DecisionCounts,
 	majority: DecisionMajorityConfiguration
 ): DecisionOutcome {
-	if (counts.support === 0 && counts.oppose === 0) return { state: 'no-result', winner: null };
+	if (counts.support === 0 && counts.oppose === 0) {
+		return { state: 'no-result', winner: null };
+	}
 	if (counts.support === counts.oppose) {
 		return { state: 'tie', winner: null, tied: ['support', 'oppose'] };
 	}
@@ -145,8 +147,12 @@ function getDecisionOutcome(
 	if (majority.majorityRule === 'qualified') {
 		const denominator =
 			counts.support + counts.oppose + (majority.abstentionsCounted ? counts.abstention : 0);
-		if (3 * counts.support >= 2 * denominator) return { state: 'winner', winner: 'support' };
+
+		if (3 * counts.support >= 2 * denominator) {
+			return { state: 'winner', winner: 'support' };
+		}
 	}
+
 	return { state: 'rejected', winner: null };
 }
 
@@ -194,7 +200,7 @@ function getSelectionOutcome(
 	}
 
 	// For multiple positions, vote count wins and the configured option position breaks ties.
-	const remaining = [...regular].sort(
+	const remaining = [...regular].toSorted(
 		(left, right) => right.count - left.count || left.position - right.position
 	);
 
@@ -261,7 +267,9 @@ function getSelectionOutcome(
 		if (regularWinners.length === 1) {
 			const [winner] = regularWinners;
 
-			if (winner) return { state: 'winner', winner };
+			if (winner) {
+				return { state: 'winner', winner };
+			}
 		}
 
 		return {
@@ -296,9 +304,11 @@ export function buildOutcomeSnapshotDocument({
 	if (vote.kind === 'decision') {
 		const counts = emptyDecisionCounts();
 
-		for (const ballot of parsedBallots) {
-			if (ballot.type !== 'decision') throw new Error('Decision Vote contains a Selection Ballot.');
-			counts[ballot.choice] += 1;
+		for (const parsedBallot of parsedBallots) {
+			if (parsedBallot.type !== 'decision') {
+				throw new Error('Decision Vote contains a Selection Ballot.');
+			}
+			counts[parsedBallot.choice] += 1;
 		}
 
 		return {
@@ -324,23 +334,27 @@ export function buildOutcomeSnapshotDocument({
 	let vacancy = 0;
 	let abstention = 0;
 
-	for (const ballot of parsedBallots) {
-		if (ballot.type !== 'selection') throw new Error('Selection Vote contains a Decision Ballot.');
+	for (const parsedBallot of parsedBallots) {
+		if (parsedBallot.type !== 'selection') {
+			throw new Error('Selection Vote contains a Decision Ballot.');
+		}
 
-		if (ballot.abstain) {
+		if (parsedBallot.abstain) {
 			abstention += 1;
 			continue;
 		}
 
-		for (const optionId of ballot.selectedOptionIds) {
+		for (const optionId of parsedBallot.selectedOptionIds) {
 			const option = optionById.get(optionId);
 
-			if (!option) throw new Error('Selection Ballot references an option from another Vote.');
+			if (!option) {
+				throw new Error('Selection Ballot references an option from another Vote.');
+			}
 
 			option.count += 1;
 		}
 
-		vacancy += ballot.vacancyCount;
+		vacancy += parsedBallot.vacancyCount;
 	}
 
 	const counts: SelectionCounts = { options: optionCounts, vacancy, abstention };
@@ -377,11 +391,14 @@ export async function readOutcomeSnapshots(
 	executor: OutcomeExecutor,
 	voteIds: string[]
 ): Promise<Map<string, OutcomeSnapshot>> {
-	if (voteIds.length === 0) return new Map();
+	if (voteIds.length === 0) {
+		return new Map();
+	}
 	const rows = await executor
 		.select()
 		.from(outcomeSnapshot)
 		.where(inArray(outcomeSnapshot.voteId, voteIds));
+
 	return new Map(
 		rows.map((row) => [
 			row.voteId,
@@ -400,5 +417,6 @@ export async function readVoteBallots(executor: OutcomeExecutor, voteId: string)
 		.select({ payload: ballot.payload })
 		.from(ballot)
 		.where(eq(ballot.voteId, voteId));
+
 	return rows.map(({ payload }) => payload);
 }

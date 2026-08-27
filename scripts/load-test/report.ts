@@ -4,13 +4,16 @@ import { errorMessage } from './measure.js';
 import type { Config, OperationSummary, Report, Sample } from './types.js';
 
 export function percentile(values: readonly number[], fraction: number) {
-	if (values.length === 0) return 0;
+	if (values.length === 0) {
+		return 0;
+	}
 	const index = Math.min(values.length - 1, Math.ceil(values.length * fraction) - 1);
+
 	return values[index] ?? 0;
 }
 
 export function summarizeSamples(samples: readonly Sample[]) {
-	const operations = [...new Set(samples.map((sample) => sample.operation))].sort();
+	const operations = [...new Set(samples.map((sample) => sample.operation))].toSorted();
 	const summaries: OperationSummary[] = operations.map((operation) => {
 		const operationSamples = samples.filter((sample) => sample.operation === operation);
 		const durations = operationSamples
@@ -18,7 +21,8 @@ export function summarizeSamples(samples: readonly Sample[]) {
 				(sample): sample is Extract<Sample, { outcome: 'success' }> => sample.outcome === 'success'
 			)
 			.map((sample) => sample.durationMs)
-			.sort((a, b) => a - b);
+			.toSorted((a, b) => a - b);
+
 		return {
 			operation,
 			count: operationSamples.length,
@@ -50,6 +54,7 @@ export function createReport(
 	fatalError: unknown
 ): Report {
 	const { summaries, failures } = summarizeSamples(samples);
+
 	return {
 		version: 1,
 		status,

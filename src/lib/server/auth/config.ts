@@ -63,16 +63,21 @@ export const auth = betterAuth({
 			update: {
 				before: async (session, context) => {
 					const createdAt = context?.context.session?.session.createdAt;
-					if (!(createdAt instanceof Date) || session.expiresAt === undefined) return;
+
+					if (!(createdAt instanceof Date) || session.expiresAt === undefined) {
+						return undefined;
+					}
 
 					const absoluteExpiry = new Date(
 						createdAt.getTime() + ORGANIZER_SESSION_ABSOLUTE_MILLISECONDS
 					);
 					const requestedExpiry = new Date(session.expiresAt);
 
-					if (requestedExpiry > absoluteExpiry) {
-						return { data: { expiresAt: absoluteExpiry } };
+					if (requestedExpiry < absoluteExpiry) {
+						return undefined;
 					}
+
+					return { data: { expiresAt: absoluteExpiry } };
 				}
 			}
 		}
@@ -84,12 +89,17 @@ export const auth = betterAuth({
 /** Enforces the absolute session lifetime in addition to Better Auth's idle expiry. */
 export async function getValidSession(headers: HeadersInit) {
 	const session = await auth.api.getSession({ headers });
-	if (!session) return null;
+
+	if (!session) {
+		return null;
+	}
 
 	const absoluteExpiry =
 		new Date(session.session.createdAt).getTime() + ORGANIZER_SESSION_ABSOLUTE_MILLISECONDS;
 
-	if (Date.now() < absoluteExpiry) return session;
+	if (Date.now() < absoluteExpiry) {
+		return session;
+	}
 
 	await db.delete(schema.session).where(eq(schema.session.token, session.session.token));
 
@@ -107,19 +117,25 @@ export async function handleAuthRequest(request: Request) {
 		pathname.includes('/reset-password') ||
 		pathname.endsWith('/change-password');
 
-	if (isDisabledPasswordPath) return new Response(null, { status: 404 });
+	if (isDisabledPasswordPath) {
+		return new Response(null, { status: 404 });
+	}
 
 	const response = await auth.handler(request);
 	const isEmailSignIn = pathname.endsWith('/sign-in/email');
 	const isRateLimitFailure = response.status === 429;
 
-	if (!isRateLimitFailure && !(isEmailSignIn && response.status >= 400)) return response;
+	if (!isRateLimitFailure && !(isEmailSignIn && response.status >= 400)) {
+		return response;
+	}
+
 	return genericAuthFailureResponse(response);
 }
 
 /** Replaces the body while preserving the response status, headers, and cookies. */
 export function genericAuthFailureResponse(response: Response) {
 	const headers = new Headers(response.headers);
+
 	headers.delete('content-length');
 	headers.set('content-type', 'application/json');
 

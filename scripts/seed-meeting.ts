@@ -1,9 +1,7 @@
 /// <reference types="node" />
 
-import { eq } from 'drizzle-orm';
 import { addDraftVote } from '#lib/server/agenda/commands.js';
 import { db, client } from '#lib/server/db/index.js';
-import { user } from '#lib/server/db/schema/auth.js';
 import { createDraftMeeting } from '#lib/server/meeting/commands.js';
 import { draftVoteSchema, type DraftVoteInput } from '#lib/schemas/vote.js';
 import { organizerVoteToDraftFields } from '#lib/vote/configuration.js';
@@ -53,12 +51,15 @@ async function resolveOrganizerUserId() {
 		throw new Error('Set SEED_ORGANIZER_USER_ID or SEED_ORGANIZER_EMAIL to an existing user.');
 	}
 
-	const [organizer] = requestedUserId
-		? await db.select({ id: user.id }).from(user).where(eq(user.id, requestedUserId))
-		: await db.select({ id: user.id }).from(user).where(eq(user.email, requestedEmail));
+	const organizer = await db.query.user.findFirst({
+		where: {
+			OR: [{ id: requestedUserId }, { email: requestedEmail }]
+		}
+	});
 
 	if (!organizer) {
 		const identifier = requestedUserId ? `user id ${requestedUserId}` : `email ${requestedEmail}`;
+
 		throw new Error(`Could not find an existing organizer with ${identifier}.`);
 	}
 
@@ -99,6 +100,7 @@ try {
 		title: meetingTitle,
 		expectedParticipantCount: null
 	});
+
 	inserted.meetingId = createdMeeting.id;
 
 	for (const definition of voteDefinitions) {
@@ -106,7 +108,10 @@ try {
 			organizerUserId,
 			...toDraftVoteInput(createdMeeting.id, definition)
 		});
-		if (!createdVote) throw new Error(`Could not add Vote ${definition.title}.`);
+
+		if (!createdVote) {
+			throw new Error(`Could not add Vote ${definition.title}.`);
+		}
 		inserted.voteIds.push(createdVote.id);
 	}
 
@@ -115,6 +120,7 @@ try {
 	);
 } catch (error) {
 	console.error('Seed failed after these rows were inserted:', JSON.stringify(inserted));
+
 	throw error;
 } finally {
 	await client.end();

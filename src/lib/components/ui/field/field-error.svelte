@@ -17,16 +17,23 @@
 	} = $props();
 
 	function onlyRootIssues(issues: { message?: string; path?: string[] }[] | undefined) {
-		if (!issues) return undefined;
+		if (!issues) {
+			return undefined;
+		}
+
 		return issues.filter((issue) => issue.path == null || issue.path?.length === 0);
 	}
 
 	const errorsToDisplay = $derived(rootOnly ? onlyRootIssues(errors) : errors);
 
 	const hasContent = $derived.by(() => {
-		if (children) return true;
+		if (children) {
+			return true;
+		}
 
-		if (!errorsToDisplay || errorsToDisplay.length === 0) return false;
+		if (!errorsToDisplay || errorsToDisplay.length === 0) {
+			return false;
+		}
 
 		if (errorsToDisplay.length === 1 && !errorsToDisplay[0]?.message) {
 			return false;

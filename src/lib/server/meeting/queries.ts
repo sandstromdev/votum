@@ -25,7 +25,8 @@ import type {
 import {
 	applyIncompleteResolution,
 	type PublicOutcome,
-	type PublicVoteResult
+	type PublicVoteResult,
+	type SelectionWinner
 } from '#lib/vote/outcome.js';
 import { majorityRequirement, majorityRuleLabel } from '#lib/vote/majority.js';
 import { createActiveVoteKey } from './active-vote-key.js';
@@ -47,7 +48,9 @@ function participantDecisionLabels(decision: {
 }
 
 export async function readActiveBallotCounts(executor: AgendaExecutor, meetingIds: string[]) {
-	if (meetingIds.length === 0) return new Map<string, number>();
+	if (meetingIds.length === 0) {
+		return new Map<string, number>();
+	}
 
 	const rows = await executor
 		.select({ meetingId: vote.meetingId, count: count(ballot.id) })
@@ -56,7 +59,7 @@ export async function readActiveBallotCounts(executor: AgendaExecutor, meetingId
 		.where(and(inArray(vote.meetingId, meetingIds), eq(vote.lifecycle, 'open')))
 		.groupBy(vote.meetingId);
 
-	return new Map(rows.map((row) => [row.meetingId, Number(row.count)]));
+	return new Map(rows.map((row) => [row.meetingId, row.count]));
 }
 
 export async function readActiveBallotCount(executor: AgendaExecutor, meetingId: string) {
@@ -64,7 +67,9 @@ export async function readActiveBallotCount(executor: AgendaExecutor, meetingId:
 }
 
 function removePrivateBallot(projection: ParticipantPageProjection): ParticipantProjection {
-	if (projection.state !== 'active') return projection;
+	if (projection.state !== 'active') {
+		return projection;
+	}
 
 	return {
 		state: projection.state,
@@ -76,15 +81,49 @@ function removePrivateBallot(projection: ParticipantPageProjection): Participant
 	};
 }
 
+function getPublicWinner(winner: SelectionWinner | null) {
+	switch (winner?.type) {
+		case 'option':
+			return { type: 'option' as const, label: winner.label };
+		case 'vacancy':
+			return { type: 'vacancy' as const };
+		case 'options':
+			return { type: 'options' as const, options: winner.options.map(({ label }) => ({ label })) };
+		case 'positions':
+			return {
+				type: 'positions' as const,
+				positions: winner.positions.map((position) => {
+					if (position.type === 'option') {
+						return { type: 'option' as const, label: position.label };
+					}
+					if (position.type === 'vacancy') {
+						return { type: 'vacancy' as const };
+					}
+
+					return { type: 'unresolved' as const };
+				})
+			};
+		default:
+			return null;
+	}
+}
+
 function toPublicResult(
 	organizerVote: NonNullable<Awaited<ReturnType<typeof readAgenda>>[number]>,
 	includeBreakdown: boolean
 ): PublicVoteResult {
-	if (!organizerVote.outcome || !organizerVote.revealed) return { revealed: false };
+	if (!organizerVote.outcome || !organizerVote.revealed) {
+		return { revealed: false };
+	}
 	const document = organizerVote.outcome.document;
+
 	if (document.outcome.kind === 'decision') {
-		if (!('support' in document.counts)) throw new Error('Decision snapshot has Selection counts.');
-		if (document.vote.kind !== 'decision') throw new Error('Decision snapshot has Selection Vote.');
+		if (!('support' in document.counts)) {
+			throw new Error('Decision snapshot has Selection counts.');
+		}
+		if (document.vote.kind !== 'decision') {
+			throw new Error('Decision snapshot has Selection Vote.');
+		}
 		const final: Extract<PublicOutcome, { kind: 'decision' }> = {
 			kind: 'decision',
 			state: document.outcome.state,
@@ -92,6 +131,7 @@ function toPublicResult(
 			majorityLabel: majorityRuleLabel(document.vote.decision),
 			abstentionsCounted: document.vote.decision.abstentionsCounted
 		};
+
 		return {
 			revealed: true,
 			final,
@@ -99,39 +139,28 @@ function toPublicResult(
 		};
 	}
 
-	if (!('options' in document.counts)) throw new Error('Selection snapshot has Decision counts.');
+	if (!('options' in document.counts)) {
+		throw new Error('Selection snapshot has Decision counts.');
+	}
 	const outcome = applyIncompleteResolution(document.outcome, organizerVote.resolution);
 	const winner = outcome.winner;
-	const publicWinner = winner
-		? winner.type === 'option'
-			? { type: 'option' as const, label: winner.label }
-			: winner.type === 'vacancy'
-				? { type: 'vacancy' as const }
-				: winner.type === 'options'
-					? { type: 'options' as const, options: winner.options.map(({ label }) => ({ label })) }
-					: {
-							type: 'positions' as const,
-							positions: winner.positions.map((position) =>
-								position.type === 'option'
-									? { type: 'option' as const, label: position.label }
-									: position.type === 'vacancy'
-										? { type: 'vacancy' as const }
-										: { type: 'unresolved' as const }
-							)
-						}
-		: null;
+	const publicWinner = getPublicWinner(winner);
 	const final: Extract<PublicOutcome, { kind: 'selection' }> = {
 		kind: 'selection',
 		state: outcome.state,
 		winner: publicWinner
 	};
+
 	return {
 		revealed: true,
 		final,
 		...(includeBreakdown
 			? {
 					breakdown: {
-						options: document.counts.options.map(({ label, count }) => ({ label, count })),
+						options: document.counts.options.map(({ label, count: optionCount }) => ({
+							label,
+							count: optionCount
+						})),
 						vacancy: document.counts.vacancy,
 						abstention: document.counts.abstention
 					}
@@ -161,7 +190,7 @@ export async function readOrganizerMeetings(executor: AgendaExecutor, organizerU
 export async function listOrganizerMeetings(organizerUserId: string) {
 	// Keep Meeting rows, agenda configuration, outcome data, resolutions, and Ballot counts on one
 	// snapshot without taking row locks while another command commits.
-	return db.transaction((tx) => readOrganizerMeetings(tx, organizerUserId), {
+	return db.transaction(async (tx) => readOrganizerMeetings(tx, organizerUserId), {
 		isolationLevel: 'repeatable read',
 		accessMode: 'read only'
 	});
@@ -185,7 +214,9 @@ export async function readOrganizerMeetingByLocator(
 		)
 		.limit(1);
 
-	if (!row) return null;
+	if (!row) {
+		return null;
+	}
 
 	const [agenda, activeBallotCount] = await Promise.all([
 		readAgendaForMeeting(executor, row.id),
@@ -205,7 +236,7 @@ export async function getOrganizerMeetingByLocator({
 	// Keep Meeting rows, agenda configuration, outcome data, resolutions, and Ballot counts on one
 	// snapshot without taking row locks while another command commits.
 	return db.transaction(
-		(tx) => readOrganizerMeetingByLocator(tx, { organizerUserId, publicLocator }),
+		async (tx) => readOrganizerMeetingByLocator(tx, { organizerUserId, publicLocator }),
 		{ isolationLevel: 'repeatable read', accessMode: 'read only' }
 	);
 }
@@ -230,14 +261,18 @@ async function readParticipantPageProjection(
 		.where(eq(meeting.publicLocator, publicLocator))
 		.limit(1);
 
-	if (!row) return { state: 'invalid', message: INVALID_MEETING_MESSAGE };
+	if (!row) {
+		return { state: 'invalid', message: INVALID_MEETING_MESSAGE };
+	}
 
 	const nonActiveParticipation = {
 		current: 0,
 		expected: row.expectedParticipantCount
 	};
 
-	if (row.lifecycle === 'draft') return { state: 'invalid', message: INVALID_MEETING_MESSAGE };
+	if (row.lifecycle === 'draft') {
+		return { state: 'invalid', message: INVALID_MEETING_MESSAGE };
+	}
 
 	if (row.lifecycle === 'closed') {
 		return {
@@ -261,17 +296,22 @@ async function readParticipantPageProjection(
 			.where(and(eq(vote.meetingId, row.meetingId), eq(vote.lifecycle, 'closed')))
 			.orderBy(desc(vote.closedAt), desc(vote.position))
 			.limit(1);
+
 		if (closedVote) {
 			const [outcomes, resolutions] = await Promise.all([
 				readOutcomeSnapshots(tx, [closedVote.id]),
 				readOutcomeResolutions(tx, [closedVote.id])
 			]);
 			const [organizerVote] = await readAgenda(tx, [closedVote], outcomes, resolutions);
-			if (!organizerVote) throw new Error('Closed Vote is missing its configuration.');
+
+			if (!organizerVote) {
+				throw new Error('Closed Vote is missing its configuration.');
+			}
 			const [closedParticipation] = await tx
 				.select({ count: count() })
 				.from(ballot)
 				.where(eq(ballot.voteId, closedVote.id));
+
 			return {
 				state: 'closed',
 				meeting: { title: row.title },
@@ -284,13 +324,14 @@ async function readParticipantPageProjection(
 							}
 						: { title: organizerVote.title, kind: organizerVote.kind },
 				participation: {
-					current: Number(closedParticipation.count),
+					current: closedParticipation.count,
 					expected: row.expectedParticipantCount
 				},
 				result: toPublicResult(organizerVote, organizerVote.publicResultBreakdownEnabled ?? false),
 				revision: row.revision
 			};
 		}
+
 		return {
 			state: 'waiting',
 			meeting: { title: row.title },
@@ -305,12 +346,15 @@ async function readParticipantPageProjection(
 		.where(eq(ballot.voteId, activeVote.id));
 
 	const participation = {
-		current: Number(currentParticipation.count),
+		current: currentParticipation.count,
 		expected: row.expectedParticipantCount
 	};
 
 	const [organizerVote] = await readAgenda(tx, [activeVote]);
-	if (!activeVote.openedAt) throw new Error('Active Vote is missing its open timestamp.');
+
+	if (!activeVote.openedAt) {
+		throw new Error('Active Vote is missing its open timestamp.');
+	}
 	const currentBallot = await readCurrentParticipantBallot(tx, {
 		meetingId: row.meetingId,
 		voteId: activeVote.id,
@@ -325,6 +369,7 @@ async function readParticipantPageProjection(
 		revision: row.revision,
 		currentBallot
 	};
+
 	if (organizerVote.kind === 'decision') {
 		return {
 			...activeProjection,
@@ -338,6 +383,7 @@ async function readParticipantPageProjection(
 			}
 		};
 	}
+
 	return {
 		...activeProjection,
 		vote: {
@@ -359,7 +405,7 @@ export async function getParticipantPageProjection(
 ): Promise<ParticipantPageProjection> {
 	let anomaly: ParticipantTokenAnomalyInput | undefined;
 	const projection = await db.transaction(
-		(tx) =>
+		async (tx) =>
 			readParticipantPageProjection(tx, publicLocator, rawParticipantToken, (input) => {
 				anomaly = input;
 			}),
@@ -368,7 +414,10 @@ export async function getParticipantPageProjection(
 
 	// The projection transaction has committed before this separate best-effort write starts. This
 	// avoids both savepoint poisoning and pool deadlock when many pages report the same anomaly.
-	if (anomaly) await recordParticipantTokenAnomalyBestEffort(anomaly);
+	if (anomaly) {
+		await recordParticipantTokenAnomalyBestEffort(anomaly);
+	}
+
 	return projection;
 }
 
@@ -378,6 +427,7 @@ export async function getParticipantProjection(
 	return db.transaction(
 		async (tx) => {
 			const pageProjection = await readParticipantPageProjection(tx, publicLocator, undefined);
+
 			return removePrivateBallot(pageProjection);
 		},
 		{ isolationLevel: 'repeatable read', accessMode: 'read only' }
@@ -388,7 +438,9 @@ function toPresentationProjection(
 	projection: ParticipantProjection,
 	presentationQrEnabled: boolean
 ) {
-	if (projection.state === 'invalid') return projection;
+	if (projection.state === 'invalid') {
+		return projection;
+	}
 	if (projection.state !== 'active') {
 		return {
 			...projection,
@@ -428,11 +480,15 @@ export async function getPresentationProjection(
 				.from(meeting)
 				.where(eq(meeting.publicLocator, publicLocator))
 				.limit(1);
-			if (!settings) return { state: 'invalid', message: INVALID_MEETING_MESSAGE };
+
+			if (!settings) {
+				return { state: 'invalid', message: INVALID_MEETING_MESSAGE };
+			}
 
 			const projection = removePrivateBallot(
 				await readParticipantPageProjection(tx, publicLocator, undefined)
 			);
+
 			return toPresentationProjection(projection, settings.presentationQrEnabled);
 		},
 		{ isolationLevel: 'repeatable read', accessMode: 'read only' }
@@ -445,5 +501,6 @@ export async function getParticipantMeetingId(publicLocator: string) {
 		.from(meeting)
 		.where(eq(meeting.publicLocator, publicLocator))
 		.limit(1);
+
 	return row?.id ?? null;
 }

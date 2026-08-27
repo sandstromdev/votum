@@ -9,8 +9,7 @@
 	import { STALE_ACTIVE_VOTE_MESSAGE } from '#lib/vote/ballot.js';
 	import type { ParticipantBallot, ParticipantPageProjection } from '#lib/vote/meeting.js';
 	import { refreshAll } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 
 	type SelectionVote = Extract<
@@ -63,7 +62,9 @@
 			return;
 		}
 
-		if (selection.mode === 'multiple' && abstain) return;
+		if (selection.mode === 'multiple' && abstain) {
+			return;
+		}
 
 		if (update.type === 'vacant') {
 			if (selection.mode === 'single') {
@@ -79,6 +80,7 @@
 			}
 
 			dirty = selectionCount > 0;
+
 			return;
 		}
 
@@ -88,11 +90,14 @@
 			selected.add(update.optionId);
 			abstain = false;
 			vacancyCount = 0;
+
 			return;
 		}
 
 		if (update.type === 'add') {
-			if (selected.size + vacancyCount >= selection.positionCount) return;
+			if (selected.size + vacancyCount >= selection.positionCount) {
+				return;
+			}
 
 			selected.add(update.optionId);
 		} else if (update.type === 'remove') {

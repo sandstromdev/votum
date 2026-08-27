@@ -4,8 +4,11 @@ import { meeting } from '#lib/server/db/schema/meeting.js';
 import { meetingPubSub, type MeetingSubscriptionOptions } from '#lib/server/pubsub.js';
 import { timingEnd, timingStart, withTiming, type TimingContext } from '#lib/server/timing.js';
 
-function snapshotRevision<T>(snapshot: T) {
-	if (typeof snapshot !== 'object' || snapshot === null || !('revision' in snapshot)) return -1;
+function snapshotRevision(snapshot: unknown) {
+	if (typeof snapshot !== 'object' || snapshot === null || !('revision' in snapshot)) {
+		return -1;
+	}
+
 	return typeof snapshot.revision === 'number' ? snapshot.revision : -1;
 }
 
@@ -21,8 +24,10 @@ export async function* liveMeetingSnapshots<T>(
 
 	try {
 		let snapshot = await read();
+
 		if (timing) {
 			const startedAt = timingStart(timing, 'organizer.snapshot_yield');
+
 			try {
 				yield snapshot;
 			} finally {
@@ -36,13 +41,20 @@ export async function* liveMeetingSnapshots<T>(
 			const currentRevision = snapshotRevision(snapshot);
 
 			const update = await nextRevision;
-			if (update.done) return;
+
+			if (update.done) {
+				return;
+			}
 
 			nextRevision = pending.next();
 			const event = update.value;
-			if (!event) continue;
+
+			if (!event) {
+				continue;
+			}
 
 			let shouldRead = false;
+
 			if (!('revision' in event)) {
 				shouldRead = true;
 			} else if (event.ballotActivity) {
@@ -74,6 +86,7 @@ export async function* liveMeetingSnapshots<T>(
 					'organizer.snapshot_yield',
 					event.sourceCorrelationId
 				);
+
 				try {
 					yield snapshot;
 				} finally {
@@ -102,5 +115,6 @@ export async function readOwnedMeetingIdByLocator(organizerUserId: string, publi
 			and(eq(meeting.organizerUserId, organizerUserId), eq(meeting.publicLocator, publicLocator))
 		)
 		.limit(1);
+
 	return row?.id ?? null;
 }

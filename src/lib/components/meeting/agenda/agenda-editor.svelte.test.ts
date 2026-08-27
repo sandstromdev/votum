@@ -6,42 +6,43 @@ import { cancelConfirmDialog } from '#lib/confirm-dialog.svelte.js';
 import AgendaEditor from './agenda-editor.svelte';
 import type { OrganizerVote } from '#lib/vote/agenda.js';
 
-const remote = vi.hoisted(() => {
-	function createField(name: string, initialValue: unknown) {
-		let value = initialValue;
+function createField(name: string, initialValue: unknown) {
+	let value = initialValue;
 
-		return {
-			set(nextValue: unknown) {
-				value = nextValue;
-			},
-			value() {
-				return value;
-			},
-			as(type: string, fallback?: unknown) {
-				function updateFromEvent(event: Event) {
-					const target = event.currentTarget;
-					if (target instanceof HTMLInputElement) {
-						value = type === 'checkbox' ? target.checked : target.value;
-					} else if (target instanceof HTMLSelectElement) {
-						value = target.value;
-					}
+	return {
+		set(nextValue: unknown) {
+			value = nextValue;
+		},
+		value() {
+			return value;
+		},
+		as(type: string, fallback?: unknown) {
+			function updateFromEvent(event: Event) {
+				const target = event.currentTarget;
+
+				if (target instanceof HTMLInputElement) {
+					value = type === 'checkbox' ? target.checked : target.value;
+				} else if (target instanceof HTMLSelectElement) {
+					value = target.value;
 				}
-
-				return {
-					name,
-					type,
-					value: value ?? fallback,
-					checked: value === true,
-					oninput: updateFromEvent,
-					onchange: updateFromEvent
-				};
-			},
-			issues() {
-				return [];
 			}
-		};
-	}
 
+			return {
+				name,
+				type,
+				value: value ?? fallback,
+				checked: value === true,
+				oninput: updateFromEvent,
+				onchange: updateFromEvent
+			};
+		},
+		issues() {
+			return [];
+		}
+	};
+}
+
+const remote = vi.hoisted(() => {
 	function createForm() {
 		const fields = {
 			meetingId: createField('meetingId', ''),
@@ -151,6 +152,7 @@ beforeEach(() => {
 
 it('opens a new Vote form and focuses Rubrik', async () => {
 	const screen = await render(AgendaEditor, { meeting: createMeeting() });
+
 	await settled();
 
 	await screen.getByRole('button', { name: 'Lägg till omröstning' }).click();
@@ -201,6 +203,7 @@ it('saves an edited Vote and restores its card', async () => {
 
 	await screen.getByRole('button', { name: 'Redigera omröstning' }).click();
 	const saveButton = screen.getByRole('button', { name: 'Spara ändringar' });
+
 	await expect.element(saveButton).toBeDisabled();
 	await screen.getByRole('textbox', { name: 'Rubrik' }).fill('Ändrad rubrik');
 	await expect.element(saveButton).not.toBeDisabled();

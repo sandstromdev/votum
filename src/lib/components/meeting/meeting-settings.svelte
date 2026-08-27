@@ -47,7 +47,9 @@
 	form.fields.expectedParticipantCount.set(untrack(() => expectedParticipantCount ?? undefined));
 
 	async function openMeetingFromDraft() {
-		if (opening) return;
+		if (opening) {
+			return;
+		}
 		opening = true;
 		try {
 			await openMeeting({ meetingId: meeting.id, expectedRevision: meeting.revision });
@@ -60,7 +62,9 @@
 	}
 
 	async function deleteMeetingFromDraft() {
-		if (deleting) return;
+		if (deleting) {
+			return;
+		}
 		deleting = true;
 		try {
 			await deleteMeeting({ meetingId: meeting.id });
@@ -74,9 +78,12 @@
 	}
 
 	async function changePresentationQrEnabled(enabled: boolean) {
-		if (presentationQrBusy || isClosed) return;
+		if (presentationQrBusy || isClosed) {
+			return;
+		}
 
 		const previous = presentationQrEnabled;
+
 		presentationQrEnabled = enabled;
 		presentationQrBusy = true;
 		try {

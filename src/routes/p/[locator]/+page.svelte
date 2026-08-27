@@ -20,10 +20,17 @@
 	);
 	const projection = $derived.by(() => {
 		const live = liveProjection?.current;
-		if (!live) return data.projection;
-		if (live.state === 'invalid')
+
+		if (!live) {
+			return data.projection;
+		}
+		if (live.state === 'invalid') {
 			return data.projection.state === 'invalid' ? live : data.projection;
-		if (data.projection.state === 'invalid') return live;
+		}
+		if (data.projection.state === 'invalid') {
+			return live;
+		}
+
 		return live.revision >= data.projection.revision ? live : data.projection;
 	});
 	let pollTimer: ReturnType<typeof setTimeout> | undefined;
@@ -33,12 +40,16 @@
 	const liveUnavailable = $derived(Boolean(liveProjection?.done || liveProjection?.error));
 
 	function stopPolling() {
-		if (pollTimer) clearTimeout(pollTimer);
+		if (pollTimer) {
+			clearTimeout(pollTimer);
+		}
 		pollTimer = undefined;
 	}
 
 	function schedulePolling() {
-		if (pollTimer || liveProjection?.connected || !liveUnavailable) return;
+		if (pollTimer || liveProjection?.connected || !liveUnavailable) {
+			return;
+		}
 
 		pollTimer = setTimeout(async () => {
 			pollTimer = undefined;
@@ -53,14 +64,19 @@
 	}
 
 	$effect(() => {
-		if (liveProjection?.connected) stopPolling();
-		else if (liveUnavailable) schedulePolling();
+		if (liveProjection?.connected) {
+			stopPolling();
+		} else if (liveUnavailable) {
+			schedulePolling();
+		}
 	});
 
 	onDestroy(stopPolling);
 
 	async function checkForUpdates() {
-		if (checking) return;
+		if (checking) {
+			return;
+		}
 		checking = true;
 		updateError = null;
 		try {

@@ -1,6 +1,6 @@
 import { asc, eq, inArray } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
-import { db } from '#lib/server/db/index.js';
+import type { db } from '#lib/server/db/index.js';
 import { readOutcomeSnapshots } from '#lib/server/outcome/snapshot.js';
 import { outcomeResolution } from '#lib/server/db/schema/outcome.js';
 import {
@@ -21,7 +21,10 @@ export type AgendaExecutor = typeof db | AgendaTransaction;
 export async function deleteAgendaForMeeting(tx: AgendaTransaction, meetingId: string) {
 	const votes = await tx.select({ id: vote.id }).from(vote).where(eq(vote.meetingId, meetingId));
 	const voteIds = votes.map(({ id }) => id);
-	if (voteIds.length === 0) return;
+
+	if (voteIds.length === 0) {
+		return;
+	}
 
 	await tx.update(vote).set({ rerunOfVoteId: null }).where(inArray(vote.id, voteIds));
 	await tx.delete(outcomeResolution).where(inArray(outcomeResolution.voteId, voteIds));
@@ -41,6 +44,7 @@ export async function insertVoteConfiguration(
 			voteId,
 			...input.decision
 		});
+
 		return;
 	}
 
@@ -66,7 +70,9 @@ export async function readAgenda(
 	outcomes: Map<string, OutcomeSnapshot> = new Map(),
 	resolutions: Map<string, IncompleteResolution> = new Map()
 ): Promise<OrganizerVote[]> {
-	if (voteRows.length === 0) return [];
+	if (voteRows.length === 0) {
+		return [];
+	}
 
 	const voteIds = voteRows.map((row) => row.id);
 	const [decisionRows, selectionRows, optionRows] = await Promise.all([
@@ -82,7 +88,11 @@ export async function readAgenda(
 	return voteRows.map((row) => {
 		if (row.kind === 'decision') {
 			const config = decisionRows.find(({ voteId }) => voteId === row.id);
-			if (!config) throw new Error('Decision Vote is missing configuration.');
+
+			if (!config) {
+				throw new Error('Decision Vote is missing configuration.');
+			}
+
 			return {
 				id: row.id,
 				meetingId: row.meetingId,
@@ -111,7 +121,11 @@ export async function readAgenda(
 		}
 
 		const config = selectionRows.find(({ voteId }) => voteId === row.id);
-		if (!config) throw new Error('Selection Vote is missing configuration.');
+
+		if (!config) {
+			throw new Error('Selection Vote is missing configuration.');
+		}
+
 		return {
 			id: row.id,
 			meetingId: row.meetingId,
@@ -152,14 +166,20 @@ export async function readAgendaForMeeting(executor: AgendaExecutor, meetingId: 
 		readOutcomeSnapshots(executor, voteIds),
 		readOutcomeResolutions(executor, voteIds)
 	]);
+
 	return readAgenda(executor, voteRows, outcomes, resolutions);
 }
 
 export async function readAgendaForMeetings(executor: AgendaExecutor, meetingIds: string[]) {
 	const agendas = new Map<string, OrganizerVote[]>();
-	if (meetingIds.length === 0) return agendas;
 
-	for (const meetingId of meetingIds) agendas.set(meetingId, []);
+	if (meetingIds.length === 0) {
+		return agendas;
+	}
+
+	for (const meetingId of meetingIds) {
+		agendas.set(meetingId, []);
+	}
 
 	const voteRows = await executor
 		.select()
@@ -173,9 +193,11 @@ export async function readAgendaForMeetings(executor: AgendaExecutor, meetingIds
 	]);
 
 	const organizerVotes = await readAgenda(executor, voteRows, outcomes, resolutions);
+
 	for (const organizerVote of organizerVotes) {
 		agendas.get(organizerVote.meetingId)?.push(organizerVote);
 	}
+
 	return agendas;
 }
 
@@ -183,11 +205,14 @@ export async function readOutcomeResolutions(
 	executor: AgendaExecutor,
 	voteIds: string[]
 ): Promise<Map<string, IncompleteResolution>> {
-	if (voteIds.length === 0) return new Map();
+	if (voteIds.length === 0) {
+		return new Map();
+	}
 	const rows = await executor
 		.select()
 		.from(outcomeResolution)
 		.where(inArray(outcomeResolution.voteId, voteIds));
+
 	return new Map(
 		rows.map(({ voteId, type, resolvedAt }) => [
 			voteId,

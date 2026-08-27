@@ -37,6 +37,7 @@
 
 	function focusItem(index: number) {
 		const input = document.getElementById(`${idPrefix}-${index}`);
+
 		if (input instanceof HTMLInputElement) {
 			input.focus();
 		}
@@ -44,10 +45,12 @@
 
 	function updateItem(index: number, event: Event) {
 		const input = event.currentTarget;
+
 		if (!(input instanceof HTMLInputElement)) {
 			return;
 		}
 		const next = [...items];
+
 		next[index] = input.value;
 		sync(next);
 	}
@@ -55,6 +58,7 @@
 	async function addItem(afterIndex = items.length - 1) {
 		const index = afterIndex + 1;
 		const next = [...items.slice(0, index), '', ...items.slice(index)];
+
 		sync(next);
 		await tick();
 		focusItem(index);
@@ -65,10 +69,12 @@
 			sync(['']);
 			await tick();
 			focusItem(0);
+
 			return;
 		}
 
 		const next = items.filter((_, itemIndex) => itemIndex !== index);
+
 		sync(next);
 		await tick();
 		focusItem(Math.min(index, next.length - 1));
@@ -76,12 +82,14 @@
 
 	async function moveItem(index: number, direction: -1 | 1) {
 		const targetIndex = index + direction;
+
 		if (targetIndex < 0 || targetIndex >= items.length) {
 			return;
 		}
 
 		const next = [...items];
 		const current = next[index] ?? '';
+
 		next[index] = next[targetIndex] ?? '';
 		next[targetIndex] = current;
 		sync(next);

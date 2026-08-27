@@ -32,6 +32,7 @@ describe('Editable Meeting transaction policy', () => {
 			title: 'Revisionsmöte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		const first = await addDraftVote({
@@ -43,7 +44,10 @@ describe('Editable Meeting transaction policy', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!first) throw new Error('Expected the first draft Vote to be created');
+
+		if (!first) {
+			throw new Error('Expected the first draft Vote to be created');
+		}
 		expect(await context.getMeetingRevision(created.id)).toBe(1);
 
 		await editDraftVote({
@@ -67,7 +71,10 @@ describe('Editable Meeting transaction policy', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!second) throw new Error('Expected the second draft Vote to be created');
+
+		if (!second) {
+			throw new Error('Expected the second draft Vote to be created');
+		}
 		expect(await context.getMeetingRevision(created.id)).toBe(3);
 
 		expect(
@@ -106,6 +113,7 @@ describe('Editable Meeting transaction policy', () => {
 			title: 'Skyddat revisionsmöte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		const draftInput = {
@@ -172,6 +180,7 @@ describe('Editable Meeting transaction policy', () => {
 			title: 'Oförändrat möte',
 			expectedParticipantCount: 8
 		});
+
 		context.trackMeetings(created.id);
 
 		expect(

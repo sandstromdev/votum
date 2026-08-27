@@ -48,6 +48,7 @@ async function provisionOrganizer(password: string) {
 	});
 
 	createdUserIds.push(userId);
+
 	return { email, userId };
 }
 
@@ -64,18 +65,24 @@ function signInRequest(email: string, password: string) {
 
 function cookieFrom(response: Response) {
 	const setCookie = response.headers.get('set-cookie');
-	if (!setCookie) throw new Error('Expected Better Auth to set a session cookie');
+
+	if (!setCookie) {
+		throw new Error('Expected Better Auth to set a session cookie');
+	}
+
 	return setCookie.split(';', 1)[0];
 }
 
 async function signInOrganizer(email: string, password: string) {
 	const response = await handleAuthRequest(signInRequest(email, password));
+
 	return { response, cookie: cookieFrom(response) };
 }
 
 async function createAuthenticatedOrganizer(password = TEST_PASSWORD) {
 	const organizer = await provisionOrganizer(password);
 	const { response, cookie } = await signInOrganizer(organizer.email, password);
+
 	return { ...organizer, response, cookie };
 }
 
@@ -97,7 +104,9 @@ describe('Organizer authentication policy', () => {
 	});
 
 	afterEach(async () => {
-		if (createdUserIds.length === 0) return;
+		if (createdUserIds.length === 0) {
+			return;
+		}
 		for (const userId of createdUserIds) {
 			await sql`DELETE FROM "user" WHERE id = ${userId}`;
 		}
@@ -119,15 +128,12 @@ describe('Organizer authentication policy', () => {
 	});
 
 	it('rejects anonymous Organizer control access and accepts an authenticated boundary', () => {
-		try {
-			requireOrganizerSession({ locals: {} });
-			throw new Error('expected anonymous access to be rejected');
-		} catch (caught) {
-			expect(caught).toMatchObject({
+		expect(() => requireOrganizerSession({ locals: {} })).toThrow(
+			expect.objectContaining({
 				status: 401,
-				body: { message: ORGANIZER_AUTHORIZATION_ERROR }
-			});
-		}
+				body: expect.objectContaining({ message: ORGANIZER_AUTHORIZATION_ERROR })
+			})
+		);
 
 		const now = new Date();
 		const user = {
@@ -149,6 +155,7 @@ describe('Organizer authentication policy', () => {
 			ipAddress: null,
 			userAgent: null
 		} satisfies NonNullable<App.Locals['session']>;
+
 		expect(requireOrganizerSession({ locals: { user, session } })).toEqual({ user, session });
 	});
 
@@ -188,7 +195,9 @@ describe('Organizer authentication policy', () => {
 		const result = loginSchema.safeParse({ email: 'not-an-email', _password: '' });
 
 		expect(result.success).toBe(false);
-		if (result.success) return;
+		if (result.success) {
+			return;
+		}
 		expect(result.error.issues.map((issue) => issue.message)).toEqual([
 			'Ange en giltig e-postadress, till exempel namn@exempel.se.',
 			'Ange ditt lösenord.'
@@ -267,18 +276,21 @@ describe('Organizer authentication policy', () => {
 		const changePasswordResponse = await handleAuthRequest(
 			requestWithCookie('/change-password', cookie)
 		);
+
 		expect(changePasswordResponse.status).toBe(404);
 		expect(await changePasswordResponse.text()).toBe('');
 
 		const resetPasswordResponse = await handleAuthRequest(
 			requestWithCookie('/reset-password', cookie)
 		);
+
 		expect(resetPasswordResponse.status).toBe(404);
 		expect(await resetPasswordResponse.text()).toBe('');
 
 		const requestPasswordResetResponse = await handleAuthRequest(
 			requestWithCookie('/request-password-reset', cookie)
 		);
+
 		expect(requestPasswordResetResponse.status).toBe(404);
 		expect(await requestPasswordResetResponse.text()).toBe('');
 	});

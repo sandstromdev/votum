@@ -11,9 +11,10 @@ export async function submitInitialBallots(
 		participants,
 		config.submitRampMs,
 		async (participant) => {
-			const result = await measure(samples, 'submit', () =>
+			const result = await measure(samples, 'submit', async () =>
 				submitBallot(participant.page, config.timeoutMs, false, samples, 'submit')
 			);
+
 			participant.ballotSubmitted = result.outcome === 'success';
 		},
 		'endpoints'
@@ -29,22 +30,33 @@ export async function runHoldActions(
 
 	await runScheduled(participants, config.holdMs, async (participant, index) => {
 		const bucket = (index * 37) % 100;
+
 		if (bucket < config.withdrawPercent) {
-			if (!participant.ballotSubmitted) return;
-			await measure(samples, 'withdraw', () => withdrawBallot(participant.page, config.timeoutMs));
+			if (!participant.ballotSubmitted) {
+				return;
+			}
+			await measure(samples, 'withdraw', async () =>
+				withdrawBallot(participant.page, config.timeoutMs)
+			);
+
 			return;
 		}
 
 		if (bucket < replaceLimit) {
-			if (!participant.ballotSubmitted) return;
-			await measure(samples, 'replace', () =>
+			if (!participant.ballotSubmitted) {
+				return;
+			}
+			await measure(samples, 'replace', async () =>
 				replaceBallot(participant.page, config.timeoutMs, samples)
 			);
+
 			return;
 		}
 
 		if (bucket < replaceLimit + config.readPercent) {
-			await measure(samples, 'read', () => readParticipant(participant.page, config.timeoutMs));
+			await measure(samples, 'read', async () =>
+				readParticipant(participant.page, config.timeoutMs)
+			);
 		}
 	});
 }

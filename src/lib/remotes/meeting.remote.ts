@@ -34,10 +34,11 @@ import {
 	presentationQrVisibilitySchema,
 	voteLifecycleCommandSchema
 } from './meeting-inputs.js';
-import z from 'zod';
+import { z } from 'zod';
 
 export const participantMeeting = query(meetingLocatorQuerySchema, async ({ publicLocator }) => {
 	const event = getRequestEvent();
+
 	return getParticipantPageProjection(publicLocator, getParticipantToken(event, publicLocator));
 });
 
@@ -50,12 +51,13 @@ export const participantMeetingLive = query.live(
 
 		if (!meetingId) {
 			yield { state: 'invalid' as const, message: 'Möteslänken kunde inte hittas.' };
+
 			return;
 		}
 
 		yield* liveMeetingSnapshots(
 			meetingId,
-			() => getParticipantPageProjection(publicLocator, rawParticipantToken),
+			async () => getParticipantPageProjection(publicLocator, rawParticipantToken),
 			event.request.signal,
 			undefined,
 			{ ballotActivity: false }
@@ -75,12 +77,13 @@ export const presentationMeetingLive = query.live(
 
 		if (!meetingId) {
 			yield { state: 'invalid' as const, message: 'Möteslänken kunde inte hittas.' };
+
 			return;
 		}
 
 		yield* liveMeetingSnapshots(
 			meetingId,
-			() => getPresentationProjection(publicLocator),
+			async () => getPresentationProjection(publicLocator),
 
 			event.request.signal,
 			undefined,
@@ -95,7 +98,10 @@ export const organizerMeetingLive = query.live(
 		const event = getRequestEvent();
 		const { user } = requireOrganizerSession();
 		const meetingId = await readOwnedMeetingIdByLocator(user.id, publicLocator);
-		if (!meetingId) error(404, 'Mötet kunde inte hittas.');
+
+		if (!meetingId) {
+			error(404, 'Mötet kunde inte hittas.');
+		}
 
 		yield* liveMeetingSnapshots(
 			meetingId,
@@ -104,7 +110,11 @@ export const organizerMeetingLive = query.live(
 					organizerUserId: user.id,
 					publicLocator
 				});
-				if (!meeting) error(404, 'Mötet kunde inte hittas.');
+
+				if (!meeting) {
+					error(404, 'Mötet kunde inte hittas.');
+				}
+
 				return meeting;
 			},
 			event.request.signal,
@@ -123,7 +133,7 @@ export const createDraftMeeting = form(createMeetingSchema, async (input) => {
 		expectedParticipantCount: input.expectedParticipantCount ?? null
 	});
 
-	getOrganizerMeetings().refresh();
+	void getOrganizerMeetings().refresh();
 
 	redirect(303, `/organisera/${created.publicLocator}`);
 });
@@ -138,9 +148,11 @@ export const updateMeetingSettings = form(updateMeetingSettingsSchema, async (in
 		}
 	});
 
-	if (!updated) invalid('Mötet kunde inte hittas.');
+	if (!updated) {
+		invalid('Mötet kunde inte hittas.');
+	}
 
-	getOrganizerMeetings().refresh();
+	void getOrganizerMeetings().refresh();
 
 	return { success: true };
 });
@@ -154,8 +166,11 @@ export const setPresentationQrEnabled = command(
 			meetingId,
 			settings: { presentationQrEnabled: enabled }
 		});
-		if (!updated) error(409, 'QR-koden kan inte ändras i det här läget.');
-		getOrganizerMeetings().refresh();
+
+		if (!updated) {
+			error(409, 'QR-koden kan inte ändras i det här läget.');
+		}
+		void getOrganizerMeetings().refresh();
 	}
 );
 
@@ -175,7 +190,11 @@ export const getOrganizerMeetingByLocator = query(
 			organizerUserId: user.id,
 			publicLocator
 		});
-		if (!meeting) error(404, 'Mötet kunde inte hittas.');
+
+		if (!meeting) {
+			error(404, 'Mötet kunde inte hittas.');
+		}
+
 		return meeting;
 	}
 );
@@ -185,37 +204,51 @@ export const openMeeting = command(meetingLifecycleCommandSchema, async (input) 
 
 	const opened = await openMeetingRecord({ organizerUserId: user.id, ...input });
 
-	if (!opened) error(409, 'Mötet kan inte öppnas i det här läget.');
+	if (!opened) {
+		error(409, 'Mötet kan inte öppnas i det här läget.');
+	}
 
-	getOrganizerMeetings().refresh();
+	void getOrganizerMeetings().refresh();
 });
 
 export const activateVote = command(voteLifecycleCommandSchema, async (input) => {
 	const { user } = requireOrganizerSession();
 	const activated = await activateVoteRecord({ organizerUserId: user.id, ...input });
-	if (!activated) error(409, 'Omröstningen kan inte aktiveras i det här läget.');
-	getOrganizerMeetings().refresh();
+
+	if (!activated) {
+		error(409, 'Omröstningen kan inte aktiveras i det här läget.');
+	}
+	void getOrganizerMeetings().refresh();
 });
 
 export const activateNextVote = command(meetingLifecycleCommandSchema, async (input) => {
 	const { user } = requireOrganizerSession();
 	const activated = await activateNextVoteRecord({ organizerUserId: user.id, ...input });
-	if (!activated) error(409, 'Det finns ingen omröstning som kan aktiveras nu.');
-	getOrganizerMeetings().refresh();
+
+	if (!activated) {
+		error(409, 'Det finns ingen omröstning som kan aktiveras nu.');
+	}
+	void getOrganizerMeetings().refresh();
 });
 
 export const closeVote = command(voteLifecycleCommandSchema, async (input) => {
 	const { user } = requireOrganizerSession();
 	const closed = await closeVoteRecord({ organizerUserId: user.id, ...input });
-	if (!closed) error(409, 'Omröstningen kan inte stängas i det här läget.');
-	getOrganizerMeetings().refresh();
+
+	if (!closed) {
+		error(409, 'Omröstningen kan inte stängas i det här läget.');
+	}
+	void getOrganizerMeetings().refresh();
 });
 
 export const revealVote = command(voteLifecycleCommandSchema, async (input) => {
 	const { user } = requireOrganizerSession();
 	const revealed = await revealVoteRecord({ organizerUserId: user.id, ...input });
-	if (!revealed) error(409, 'Resultatet kan inte visas i det här läget.');
-	getOrganizerMeetings().refresh();
+
+	if (!revealed) {
+		error(409, 'Resultatet kan inte visas i det här läget.');
+	}
+	void getOrganizerMeetings().refresh();
 });
 
 export const invalidateVote = command(
@@ -229,16 +262,22 @@ export const invalidateVote = command(
 	async (input) => {
 		const { user } = requireOrganizerSession();
 		const invalidated = await invalidateVoteRecord({ organizerUserId: user.id, ...input });
-		if (!invalidated) error(409, 'Omröstningen kan inte ogiltigförklaras i det här läget.');
-		getOrganizerMeetings().refresh();
+
+		if (!invalidated) {
+			error(409, 'Omröstningen kan inte ogiltigförklaras i det här läget.');
+		}
+		void getOrganizerMeetings().refresh();
 	}
 );
 
 export const rerunVote = command(voteLifecycleCommandSchema, async (input) => {
 	const { user } = requireOrganizerSession();
 	const rerun = await rerunVoteRecord({ organizerUserId: user.id, ...input });
-	if (!rerun) error(409, 'Omröstningen kan inte göras om i det här läget.');
-	getOrganizerMeetings().refresh();
+
+	if (!rerun) {
+		error(409, 'Omröstningen kan inte göras om i det här läget.');
+	}
+	void getOrganizerMeetings().refresh();
 });
 
 export const resolveIncompleteVote = command(
@@ -248,8 +287,11 @@ export const resolveIncompleteVote = command(
 	async (input) => {
 		const { user } = requireOrganizerSession();
 		const resolved = await resolveIncompleteVoteRecord({ organizerUserId: user.id, ...input });
-		if (!resolved) error(409, 'Det inkompletta resultatet kan inte ändras i det här läget.');
-		getOrganizerMeetings().refresh();
+
+		if (!resolved) {
+			error(409, 'Det inkompletta resultatet kan inte ändras i det här läget.');
+		}
+		void getOrganizerMeetings().refresh();
 	}
 );
 
@@ -258,21 +300,30 @@ export const setPublicResultBreakdown = command(
 	async (input) => {
 		const { user } = requireOrganizerSession();
 		const updated = await setPublicResultBreakdownRecord({ organizerUserId: user.id, ...input });
-		if (!updated) error(409, 'Resultatöversikten kan inte ändras i det här läget.');
-		getOrganizerMeetings().refresh();
+
+		if (!updated) {
+			error(409, 'Resultatöversikten kan inte ändras i det här läget.');
+		}
+		void getOrganizerMeetings().refresh();
 	}
 );
 
 export const endMeeting = command(meetingLifecycleCommandSchema, async (input) => {
 	const { user } = requireOrganizerSession();
 	const ended = await endMeetingRecord({ organizerUserId: user.id, ...input });
-	if (!ended) error(409, 'Mötet kan inte avslutas i det här läget.');
-	getOrganizerMeetings().refresh();
+
+	if (!ended) {
+		error(409, 'Mötet kan inte avslutas i det här läget.');
+	}
+	void getOrganizerMeetings().refresh();
 });
 
 export const deleteMeeting = command(meetingLifecycleCommandSchema, async ({ meetingId }) => {
 	const { user } = requireOrganizerSession();
 	const deleted = await deleteMeetingRecord({ organizerUserId: user.id, meetingId });
-	if (!deleted) error(409, 'Du kan bara ta bort möten som inte har öppnats.');
-	getOrganizerMeetings().refresh();
+
+	if (!deleted) {
+		error(409, 'Du kan bara ta bort möten som inte har öppnats.');
+	}
+	void getOrganizerMeetings().refresh();
 });

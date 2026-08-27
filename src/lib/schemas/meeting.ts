@@ -1,4 +1,4 @@
-import z from 'zod';
+import { z } from 'zod';
 
 const expectedParticipantCount = z.number().int().positive().max(2_147_483_647).optional();
 

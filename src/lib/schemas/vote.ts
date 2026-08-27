@@ -1,4 +1,4 @@
-import z from 'zod';
+import { z } from 'zod';
 import { VOTE_KINDS } from '#lib/vote/agenda.js';
 import { DEFAULT_MAJORITY_RULE, MAJORITY_RULES } from '#lib/vote/majority.js';
 
@@ -49,6 +49,7 @@ function voteKindRules(input: z.infer<typeof draftVoteObject>, ctx: z.Refinement
 				message: 'Du kan bara räkna avståenden vid kvalificerad majoritet.'
 			});
 		}
+
 		return;
 	}
 
@@ -61,15 +62,18 @@ function voteKindRules(input: z.infer<typeof draftVoteObject>, ctx: z.Refinement
 	}
 
 	const options = input.options ?? [];
+
 	if (options.length === 0 || options.some((option) => !option)) {
 		ctx.addIssue({
 			code: 'custom',
 			path: ['options'],
 			message: 'Lägg till minst ett alternativ.'
 		});
+
 		return;
 	}
 	const uniqueKeys = new Set(options.map((option) => option.toLocaleLowerCase('sv-SE')));
+
 	if (uniqueKeys.size !== options.length) {
 		ctx.addIssue({
 			code: 'custom',

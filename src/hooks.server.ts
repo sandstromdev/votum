@@ -13,7 +13,10 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 
 	if (isAuthPath(event.url.toString(), auth.options)) {
 		// Better Auth's handler cannot normalize error bodies or enforce the absolute session cap.
-		if (building) return resolve(event);
+		if (building) {
+			return resolve(event);
+		}
+
 		return handleAuthRequest(event.request);
 	}
 

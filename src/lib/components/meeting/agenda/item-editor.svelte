@@ -52,7 +52,7 @@
 
 	let kind = $state(initial.kind);
 	let dirty = $state(false);
-	let formElement: HTMLFormElement;
+	let formElement = $state<HTMLFormElement | null>(null);
 	let titleInput = $state<HTMLInputElement | null>(null);
 
 	const initialValues = untrack(() => form.fields.value());
@@ -64,7 +64,7 @@
 
 	onMount(async () => {
 		await tick();
-		formElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+		formElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 		titleInput?.focus();
 	});
 </script>

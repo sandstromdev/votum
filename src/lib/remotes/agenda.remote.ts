@@ -4,12 +4,13 @@ import { draftVoteSchema } from '#lib/schemas/vote.js';
 import { removeDraftVote, reorderDraftVotes, saveDraftVote } from '#lib/server/agenda/index.js';
 import { requireOrganizerSession } from '#lib/server/auth/session.js';
 import { getOrganizerMeetings } from './meeting.remote.js';
-import z from 'zod';
+import { z } from 'zod';
 
 export const saveVote = form(draftVoteSchema, async (input) => {
 	// A missing voteId inserts a draft Vote; a present voteId replaces that draft's configuration.
 	const { user } = requireOrganizerSession();
 	const saved = await saveDraftVote({ organizerUserId: user.id, ...input });
+
 	if (!saved) {
 		if (!input.voteId) {
 			invalid('Du kan bara skapa utkast.');
@@ -17,7 +18,8 @@ export const saveVote = form(draftVoteSchema, async (input) => {
 
 		invalid('Mötet kunde inte hittas eller kan inte ändras.');
 	}
-	getOrganizerMeetings().refresh();
+	void getOrganizerMeetings().refresh();
+
 	return { success: true };
 });
 
@@ -29,8 +31,11 @@ export const deleteVote = command(
 	async (input) => {
 		const { user } = requireOrganizerSession();
 		const deleted = await removeDraftVote({ organizerUserId: user.id, ...input });
-		if (!deleted) error(409, 'Du kan bara ta bort utkast.');
-		getOrganizerMeetings().refresh();
+
+		if (!deleted) {
+			error(409, 'Du kan bara ta bort utkast.');
+		}
+		void getOrganizerMeetings().refresh();
 	}
 );
 
@@ -42,7 +47,10 @@ export const reorderVotes = command(
 	async (input) => {
 		const { user } = requireOrganizerSession();
 		const reordered = await reorderDraftVotes({ organizerUserId: user.id, ...input });
-		if (!reordered) error(409, 'Agendan kunde inte ändras.');
-		getOrganizerMeetings().refresh();
+
+		if (!reordered) {
+			error(409, 'Agendan kunde inte ändras.');
+		}
+		void getOrganizerMeetings().refresh();
 	}
 );

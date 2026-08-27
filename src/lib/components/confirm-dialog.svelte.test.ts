@@ -57,6 +57,7 @@ it('requires and trims a reason before confirming', async () => {
 
 	const confirm = screen.getByRole('button', { name: 'Bekräfta' });
 	const reason = screen.getByRole('textbox', { name: 'Anledning' });
+
 	await expect.element(reason).toHaveFocus();
 	await expect.element(confirm).toBeDisabled();
 
@@ -84,7 +85,7 @@ it('cancels when Escape is pressed', async () => {
 it('keeps the dialog open and shows loading while an async confirmation is pending', async () => {
 	let resolveConfirmation!: () => void;
 	const onConfirm = vi.fn(
-		() =>
+		async () =>
 			new Promise<void>((resolve) => {
 				resolveConfirmation = resolve;
 			})
@@ -93,6 +94,7 @@ it('keeps the dialog open and shows loading while an async confirmation is pendi
 
 	openConfirmDialog({ title: 'Avsluta mötet', onConfirm });
 	const confirm = screen.getByRole('button', { name: 'Bekräfta' });
+
 	await confirm.click();
 
 	expect(onConfirm).toHaveBeenCalledOnce();

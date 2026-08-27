@@ -37,11 +37,15 @@ export async function mutateEditableMeeting<T>({
 			.for('update')
 			.limit(1);
 
-		if (!ownedMeeting) return null;
+		if (!ownedMeeting) {
+			return null;
+		}
 
 		const result = await mutate(tx);
 
-		if (!result.changed) return { value: result.value, revision: null };
+		if (!result.changed) {
+			return { value: result.value, revision: null };
+		}
 
 		const [updated] = await tx
 			.update(meeting)

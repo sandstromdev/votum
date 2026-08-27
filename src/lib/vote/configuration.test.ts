@@ -72,6 +72,7 @@ describe('Vote configuration', () => {
 		};
 
 		const fields = organizerVoteToDraftFields(vote);
+
 		expect(fields.options).toEqual(['Ada', 'Grace']);
 		expect(draftInputToVoteConfiguration({ ...fields, meetingId })).toEqual({
 			kind: 'selection',
@@ -94,6 +95,7 @@ describe('Vote configuration', () => {
 
 	it('maps omitted Selection vacancy checkbox as false, not product default', () => {
 		const meetingId = uuidv7();
+
 		expect(
 			draftInputToVoteConfiguration({
 				meetingId,

@@ -187,7 +187,10 @@ describe('Decision Vote outcome snapshots', () => {
 describe('Selection Vote outcome snapshots', () => {
 	it('chooses a regular option for a Single-winner Selection without Vacancy', () => {
 		const ada = selectionVote.selection.options[0];
-		if (!ada) throw new Error('Expected a Selection option');
+
+		if (!ada) {
+			throw new Error('Expected a Selection option');
+		}
 
 		expect(
 			selectionSnapshot(
@@ -213,7 +216,10 @@ describe('Selection Vote outcome snapshots', () => {
 
 	it('lets a regular option win an equal Vacancy tie for a Single-winner Selection', () => {
 		const ada = selectionVote.selection.options[0];
-		if (!ada) throw new Error('Expected a Selection option');
+
+		if (!ada) {
+			throw new Error('Expected a Selection option');
+		}
 
 		expect(
 			selectionSnapshot([
@@ -288,7 +294,10 @@ describe('Selection Vote outcome snapshots', () => {
 
 	it('returns the supported options for a Multi-winner Selection', () => {
 		const [ada, bo] = multiSelectionVote.selection.options;
-		if (!ada || !bo) throw new Error('Expected two Selection options');
+
+		if (!ada || !bo) {
+			throw new Error('Expected two Selection options');
+		}
 
 		expect(
 			selectionSnapshot(
@@ -313,7 +322,10 @@ describe('Selection Vote outcome snapshots', () => {
 
 	it('returns supported options for a Multi-winner Selection with Vacancy below the cutoff', () => {
 		const [ada, bo] = multiSelectionVote.selection.options;
-		if (!ada || !bo) throw new Error('Expected two Selection options');
+
+		if (!ada || !bo) {
+			throw new Error('Expected two Selection options');
+		}
 
 		expect(
 			selectionSnapshot(
@@ -375,7 +387,10 @@ describe('Selection Vote outcome snapshots', () => {
 
 	it('returns a regular option, explicit Vacancy, and unresolved positions by position', () => {
 		const [ada, bo, cia] = multiSelectionVote.selection.options;
-		if (!ada || !bo || !cia) throw new Error('Expected three Selection options');
+
+		if (!ada || !bo || !cia) {
+			throw new Error('Expected three Selection options');
+		}
 
 		const result = selectionSnapshot(
 			[
@@ -402,7 +417,10 @@ describe('Selection Vote outcome snapshots', () => {
 
 	it('lets Vacancy fill every Multi-winner position when its support is higher', () => {
 		const [ada, bo] = multiSelectionVote.selection.options;
-		if (!ada || !bo) throw new Error('Expected two Selection options');
+
+		if (!ada || !bo) {
+			throw new Error('Expected two Selection options');
+		}
 
 		expect(
 			selectionSnapshot(
@@ -417,7 +435,10 @@ describe('Selection Vote outcome snapshots', () => {
 
 	it('keeps a Multi-winner cutoff tie unresolved', () => {
 		const [ada, bo, cia] = multiSelectionVote.selection.options;
-		if (!ada || !bo || !cia) throw new Error('Expected three Selection options');
+
+		if (!ada || !bo || !cia) {
+			throw new Error('Expected three Selection options');
+		}
 
 		expect(
 			selectionSnapshot(
@@ -442,7 +463,10 @@ describe('Selection Vote outcome snapshots', () => {
 
 	it('lets Vacancy beat a regular tie when it has more support than the cutoff', () => {
 		const [ada, bo, cia] = multiSelectionVote.selection.options;
-		if (!ada || !bo || !cia) throw new Error('Expected three Selection options');
+
+		if (!ada || !bo || !cia) {
+			throw new Error('Expected three Selection options');
+		}
 
 		const result = selectionSnapshot(
 			[
@@ -479,7 +503,10 @@ describe('Selection Vote outcome snapshots', () => {
 
 	it('lets regular options win equal Vacancy support at the Multi-winner cutoff', () => {
 		const [ada, bo] = multiSelectionVote.selection.options;
-		if (!ada || !bo) throw new Error('Expected two Selection options');
+
+		if (!ada || !bo) {
+			throw new Error('Expected two Selection options');
+		}
 
 		expect(
 			selectionSnapshot(
@@ -507,7 +534,10 @@ describe('Selection Vote outcome snapshots', () => {
 
 	it('keeps a Multi-winner tie unresolved when more regular options share the cutoff than positions', () => {
 		const [ada, bo, cia] = multiSelectionVote.selection.options;
-		if (!ada || !bo || !cia) throw new Error('Expected three Selection options');
+
+		if (!ada || !bo || !cia) {
+			throw new Error('Expected three Selection options');
+		}
 
 		expect(
 			selectionSnapshot(
@@ -536,7 +566,10 @@ describe('Selection Vote outcome snapshots', () => {
 
 	it('fills a remaining Multi-winner position with Vacancy after regular options win equal support', () => {
 		const [ada, bo] = multiSelectionVote.selection.options;
-		if (!ada || !bo) throw new Error('Expected two Selection options');
+
+		if (!ada || !bo) {
+			throw new Error('Expected two Selection options');
+		}
 
 		const result = selectionSnapshot(
 			[

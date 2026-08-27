@@ -1,30 +1,29 @@
 import { render } from 'vitest-browser-svelte';
 import { expect, it, vi } from 'vitest';
 
+function createField(name: string, initialValue: unknown) {
+	let value = initialValue;
+
+	return {
+		set(nextValue: unknown) {
+			value = nextValue;
+		},
+		value() {
+			return value;
+		},
+		as(type: string, fallback?: unknown) {
+			return {
+				name,
+				type,
+				value: value ?? fallback
+			};
+		},
+		issues() {
+			return [];
+		}
+	};
+}
 const ballotRemote = vi.hoisted(() => {
-	function createField(name: string, initialValue: unknown) {
-		let value = initialValue;
-
-		return {
-			set(nextValue: unknown) {
-				value = nextValue;
-			},
-			value() {
-				return value;
-			},
-			as(type: string, fallback?: unknown) {
-				return {
-					name,
-					type,
-					value: value ?? fallback
-				};
-			},
-			issues() {
-				return [];
-			}
-		};
-	}
-
 	function createForm() {
 		const form = {
 			fields: {
@@ -198,6 +197,7 @@ it('shows Decision aggregate counts after reveal when the public breakdown is en
 	await expect.element(screen.getByText('Slutresultat')).toBeVisible();
 	await expect.element(screen.getByText('Förslaget gick igenom')).toBeVisible();
 	const breakdown = screen.getByRole('list', { name: 'Röstfördelning' });
+
 	await expect.element(breakdown).toBeVisible();
 	await expect.element(breakdown).toHaveTextContent('För');
 	await expect.element(breakdown).toHaveTextContent('2');
@@ -273,6 +273,7 @@ it('shows Selection aggregate counts after reveal when the public breakdown is e
 	});
 
 	const breakdown = screen.getByRole('list', { name: 'Röstfördelning' });
+
 	await expect.element(breakdown).toBeVisible();
 	await expect.element(breakdown.getByText('Ada', { exact: true })).toBeVisible();
 	await expect.element(breakdown).toHaveTextContent('Ada');

@@ -1,5 +1,4 @@
-import { v7 as uuidv7 } from 'uuid';
-import { v4 as uuidv4 } from 'uuid';
+import { v7 as uuidv7, v4 as uuidv4 } from 'uuid';
 import { describe, expect, it } from 'vitest';
 import { submitDecisionBallotSchema, submitSelectionBallotSchema } from './ballot.js';
 
@@ -86,8 +85,11 @@ describe('Ballot schemas', () => {
 			vacancyCount: 0,
 			action: 'cast'
 		});
+
 		expect(duplicate).toMatchObject({ success: false });
-		if (duplicate.success) return;
+		if (duplicate.success) {
+			return;
+		}
 		expect(duplicate.error.issues.map((issue) => issue.path)).toContainEqual(['selectedOptionIds']);
 	});
 });

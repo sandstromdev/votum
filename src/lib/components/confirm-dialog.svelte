@@ -31,6 +31,7 @@
 
 	async function confirm() {
 		const dialogId = await confirmConfirmDialog();
+
 		if (dialogId !== null) {
 			closingAction = 'confirm';
 			closingDialogId = dialogId;

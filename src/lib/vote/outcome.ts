@@ -102,37 +102,55 @@ export function applyIncompleteResolution(
 	outcome: SelectionOutcome,
 	resolution: IncompleteResolution | null | undefined
 ): SelectionOutcome {
-	if (outcome.state !== 'incomplete' || !resolution) return outcome;
+	if (outcome.state !== 'incomplete' || !resolution) {
+		return outcome;
+	}
 
 	return {
 		state: 'winner',
 		winner: {
 			type: 'positions',
-			positions: outcome.winner.positions.map((position) =>
-				position.type === 'unresolved'
-					? resolution.type === 'vacancy'
-						? { type: 'vacancy', source: 'organizer' }
-						: position
-					: position
-			)
+			positions: outcome.winner.positions.map((position) => {
+				if (position.type === 'unresolved' && resolution.type === 'vacancy') {
+					return { type: 'vacancy', source: 'organizer' };
+				}
+
+				return position;
+			})
 		}
 	};
 }
 
 export function outcomeLabel(outcome: OutcomeLabelInput) {
 	if (outcome.kind === 'decision') {
-		if (outcome.state === 'tie') return 'Oavgjort';
-		if (outcome.state === 'no-result') return 'Inget resultat';
-		if (outcome.state === 'rejected') return 'Förslaget gick inte igenom';
+		if (outcome.state === 'tie') {
+			return 'Oavgjort';
+		}
+		if (outcome.state === 'no-result') {
+			return 'Inget resultat';
+		}
+		if (outcome.state === 'rejected') {
+			return 'Förslaget gick inte igenom';
+		}
+
 		return 'Förslaget gick igenom';
 	}
 
-	if (outcome.state === 'tie') return 'Oavgjort';
-	if (outcome.state === 'no-result' || !outcome.winner) return 'Inget resultat';
-	if (outcome.winner.type === 'vacancy') return 'Vakans';
-	if (outcome.winner.type === 'option') return outcome.winner.label;
-	if (outcome.winner.type === 'options')
+	if (outcome.state === 'tie') {
+		return 'Oavgjort';
+	}
+	if (outcome.state === 'no-result' || !outcome.winner) {
+		return 'Inget resultat';
+	}
+	if (outcome.winner.type === 'vacancy') {
+		return 'Vakans';
+	}
+	if (outcome.winner.type === 'option') {
+		return outcome.winner.label;
+	}
+	if (outcome.winner.type === 'options') {
 		return outcome.winner.options.map(({ label }) => label).join(', ');
+	}
 
 	const unresolved = outcome.winner.positions.filter(({ type }) => type === 'unresolved').length;
 	const vacancyCount = outcome.winner.positions.filter(
@@ -141,12 +159,14 @@ export function outcomeLabel(outcome: OutcomeLabelInput) {
 	const labels = outcome.winner.positions
 		.filter((position): position is { type: 'option'; label: string } => position.type === 'option')
 		.map(({ label }) => label);
+
 	if (vacancyCount > 0) {
 		labels.push(`${vacancyCount} ${vacancyCount === 1 ? 'vakant plats' : 'vakanta platser'}`);
 	}
 	if (unresolved > 0) {
 		labels.push(`${unresolved} ${unresolved === 1 ? 'plats ej tillsatt' : 'platser ej tillsatta'}`);
 	}
+
 	return labels.join(' + ');
 }
 

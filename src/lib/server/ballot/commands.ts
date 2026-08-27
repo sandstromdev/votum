@@ -72,6 +72,7 @@ async function lockMeeting(tx: BallotTransaction, publicLocator: string) {
 		// the same row in update mode, so they wait for writes that crossed this boundary.
 		.for('key share')
 		.limit(1);
+
 	return lockedMeeting ?? null;
 }
 
@@ -84,7 +85,10 @@ async function lockActiveVote(tx: BallotTransaction, meetingId: string) {
 		// with other Ballot writes and conflict with Close's update lock.
 		.for('key share')
 		.limit(1);
-	if (!activeVote) return null;
+
+	if (!activeVote) {
+		return null;
+	}
 
 	return { meetingId, voteId: activeVote.id, kind: activeVote.kind };
 }
@@ -112,7 +116,10 @@ async function ensureParticipantToken(
 		rawParticipantToken,
 		operation: 'submit'
 	});
-	if (existing) return { id: existing.id, createdToken: null, replayed: false };
+
+	if (existing) {
+		return { id: existing.id, createdToken: null, replayed: false };
+	}
 	if (!initialSubmissionKey) {
 		if (rawParticipantToken) {
 			const createdToken = createParticipantToken();
@@ -124,6 +131,7 @@ async function ensureParticipantToken(
 					tokenHash: hashParticipantToken(createdToken)
 				})
 				.returning({ id: participantToken.id });
+
 			return { id: created.id, createdToken, replayed: false };
 		}
 
@@ -162,9 +170,11 @@ async function ensureParticipantToken(
 		}
 
 		const replayedToken = decryptParticipantToken(replayed.initialSubmissionTokenCiphertext);
+
 		if (hashParticipantToken(replayedToken) !== replayed.tokenHash) {
 			throw new Error('Initial submission token recovery failed verification.');
 		}
+
 		return { id: replayed.id, createdToken: replayedToken, replayed: true };
 	}
 
@@ -203,7 +213,10 @@ async function ensureParticipantToken(
 			.for('update')
 			.limit(1);
 
-		if (!raced) throw new Error('Initial submission disappeared after a unique-key race.');
+		if (!raced) {
+			throw new Error('Initial submission disappeared after a unique-key race.');
+		}
+
 		return replayInitialSubmission(tx, raced, activeVoteKey, initialSubmissionPayload);
 	}
 
@@ -215,7 +228,9 @@ async function readInitialSubmission(
 	meetingId: string,
 	initialSubmissionKey: string | undefined
 ) {
-	if (!initialSubmissionKey) return null;
+	if (!initialSubmissionKey) {
+		return null;
+	}
 
 	const [record] = await tx
 		.select({
@@ -247,6 +262,7 @@ async function replayInitialSubmission(
 	initialSubmissionPayload: unknown
 ) {
 	const voteId = record.initialSubmissionVoteId;
+
 	if (!voteId) {
 		throw new Error('Initial submission Vote ID is missing.');
 	}
@@ -271,14 +287,17 @@ async function replayInitialSubmission(
 		.where(eq(participantToken.id, record.id))
 		.for('update')
 		.limit(1);
+
 	if (!lockedRecord?.initialSubmissionTokenCiphertext) {
 		throw new Error('Initial submission token recovery data is missing.');
 	}
 
 	const replayedToken = decryptParticipantToken(lockedRecord.initialSubmissionTokenCiphertext);
+
 	if (hashParticipantToken(replayedToken) !== lockedRecord.tokenHash) {
 		throw new Error('Initial submission token recovery failed verification.');
 	}
+
 	return { id: lockedRecord.id, createdToken: replayedToken, replayed: true };
 }
 
@@ -286,10 +305,13 @@ export async function submitDecisionBallot(input: DecisionBallotCommand) {
 	const timing = input.timing ?? createTimingContext();
 	// Shared locks keep independent Ballot writes concurrent. Close and End take the same rows in
 	// update mode, so they wait for writes that crossed this boundary before changing lifecycle.
-	const committed = await withTiming(timing, 'ballot.transaction', () =>
+	const committed = await withTiming(timing, 'ballot.transaction', async () =>
 		db.transaction(async (tx) => {
 			const lockedMeeting = await lockMeeting(tx, input.publicLocator);
-			if (!lockedMeeting) return null;
+
+			if (!lockedMeeting) {
+				return null;
+			}
 
 			const initialSubmissionPayload = { type: 'decision' as const, choice: input.choice };
 			const initialSubmission = input.rawParticipantToken
@@ -316,10 +338,14 @@ export async function submitDecisionBallot(input: DecisionBallotCommand) {
 				};
 			}
 
-			if (!activeVote) return null;
+			if (!activeVote) {
+				return null;
+			}
 			// Reject a stale form before creating a token or writing a ballot.
 			rejectStaleActiveVote(activeVote.voteId, input.activeVoteKey);
-			if (activeVote.kind !== 'decision') return null;
+			if (activeVote.kind !== 'decision') {
+				return null;
+			}
 
 			const token = await ensureParticipantToken(
 				tx,
@@ -359,10 +385,13 @@ export async function submitDecisionBallot(input: DecisionBallotCommand) {
 export async function submitSelectionBallot(input: SelectionBallotCommand) {
 	const timing = input.timing ?? createTimingContext();
 	// Read the configuration after locking the active vote so validation and the write share the Close boundary.
-	const committed = await withTiming(timing, 'ballot.transaction', () =>
+	const committed = await withTiming(timing, 'ballot.transaction', async () =>
 		db.transaction(async (tx) => {
 			const lockedMeeting = await lockMeeting(tx, input.publicLocator);
-			if (!lockedMeeting) return null;
+
+			if (!lockedMeeting) {
+				return null;
+			}
 
 			const initialSubmissionPayload = {
 				type: 'selection' as const,
@@ -394,9 +423,13 @@ export async function submitSelectionBallot(input: SelectionBallotCommand) {
 				};
 			}
 
-			if (!activeVote) return null;
+			if (!activeVote) {
+				return null;
+			}
 			rejectStaleActiveVote(activeVote.voteId, input.activeVoteKey);
-			if (activeVote.kind !== 'selection') return null;
+			if (activeVote.kind !== 'selection') {
+				return null;
+			}
 
 			const [configuration] = await tx
 				.select({
@@ -407,7 +440,9 @@ export async function submitSelectionBallot(input: SelectionBallotCommand) {
 				.where(eq(selectionVoteConfig.voteId, activeVote.voteId))
 				.limit(1);
 
-			if (!configuration) return null;
+			if (!configuration) {
+				return null;
+			}
 
 			if (input.selectedOptionIds.length > 0) {
 				const ownedOptions = await tx
@@ -419,6 +454,7 @@ export async function submitSelectionBallot(input: SelectionBallotCommand) {
 							inArray(selectionOption.id, input.selectedOptionIds)
 						)
 					);
+
 				if (ownedOptions.length !== input.selectedOptionIds.length) {
 					throw new Error('Selection Ballot contains an option from another Vote.');
 				}
@@ -474,12 +510,15 @@ async function withdrawBallot({
 }: WithdrawBallotCommand) {
 	const timing = inputTiming ?? createTimingContext();
 	// Use the same shared-lock order as submission. Lifecycle commands use update locks at this seam.
-	const committed = await withTiming(timing, 'ballot.transaction', () =>
+	const committed = await withTiming(timing, 'ballot.transaction', async () =>
 		db.transaction(async (tx) => {
 			const lockedMeeting = await lockMeeting(tx, publicLocator);
 			const activeVote =
 				lockedMeeting?.lifecycle === 'open' ? await lockActiveVote(tx, lockedMeeting.id) : null;
-			if (!activeVote || activeVote.kind !== kind) return null;
+
+			if (!activeVote || activeVote.kind !== kind) {
+				return null;
+			}
 			if (!rawParticipantToken) {
 				return {
 					value: { changed: false },
@@ -494,6 +533,7 @@ async function withdrawBallot({
 				rawParticipantToken,
 				operation: 'withdraw'
 			});
+
 			if (!token) {
 				return {
 					value: { changed: false },
@@ -506,6 +546,7 @@ async function withdrawBallot({
 				.delete(ballot)
 				.where(and(eq(ballot.voteId, activeVote.voteId), eq(ballot.participantTokenId, token.id)))
 				.returning({ id: ballot.id });
+
 			if (deleted.length === 0) {
 				return {
 					value: { changed: false },

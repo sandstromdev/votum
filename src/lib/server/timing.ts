@@ -28,9 +28,12 @@ function timingsEnabled() {
 }
 
 function emit(context: TimingContext, event: TimingEvent) {
-	if (!timingsEnabled()) return;
+	if (!timingsEnabled()) {
+		return;
+	}
 	if (context.sink) {
 		context.sink(event);
+
 		return;
 	}
 	console.info(JSON.stringify({ ...event, timestamp: new Date().toISOString() }));
@@ -42,6 +45,7 @@ export function timingStart(
 	sourceCorrelationId?: string
 ) {
 	const startedAt = performance.now();
+
 	emit(context, {
 		type: 'votum.timing',
 		phase: 'start',
@@ -49,6 +53,7 @@ export function timingStart(
 		correlationId: context.correlationId,
 		...(sourceCorrelationId === undefined ? {} : { sourceCorrelationId })
 	});
+
 	return startedAt;
 }
 
@@ -77,12 +82,16 @@ export async function withTiming<T>(
 	sourceCorrelationId?: string
 ): Promise<T> {
 	const startedAt = timingStart(context, operation, sourceCorrelationId);
+
 	try {
 		const value = await action();
+
 		timingEnd(context, operation, startedAt, 'success', sourceCorrelationId);
+
 		return value;
 	} catch (error) {
 		timingEnd(context, operation, startedAt, 'error', sourceCorrelationId);
+
 		throw error;
 	}
 }

@@ -29,7 +29,7 @@ describe('MeetingPubSub', () => {
 				done: false
 			});
 
-			stream.return();
+			await stream.return();
 		} finally {
 			vi.useRealTimers();
 		}
@@ -123,6 +123,7 @@ describe('MeetingPubSub', () => {
 			await vi.runOnlyPendingTimersAsync();
 
 			const expected = { kind: 'revision', revision: 2, ballotActivity: false };
+
 			expect(organizer).toHaveBeenCalledWith(expected);
 			expect(presentation).toHaveBeenCalledWith(expected);
 			expect(participant).toHaveBeenCalledWith(expected);
@@ -149,7 +150,7 @@ describe('MeetingPubSub', () => {
 			done: true
 		});
 
-		stream.return();
+		await stream.return();
 	});
 
 	it('handles errors in the listener', async () => {

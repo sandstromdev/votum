@@ -36,6 +36,7 @@ describe('Database unique violations', () => {
 			title: 'Årsmöte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		await expect(
@@ -52,6 +53,7 @@ describe('Database unique violations', () => {
 describe('sqlState', () => {
 	it('reads SQLSTATE from a Drizzle-wrapped driver error', () => {
 		const error = wrapDriverError(driverError('duplicate key value', '23505'));
+
 		expect(sqlState(error)).toBe('23505');
 		expect(isUniqueViolation(error)).toBe(true);
 	});
@@ -69,6 +71,7 @@ describe('sqlState', () => {
 describe('driverMessage', () => {
 	it('reads the message from a Drizzle-wrapped driver error', () => {
 		const error = wrapDriverError(new Error('duplicate key value violates unique constraint'));
+
 		expect(driverMessage(error)).toBe('duplicate key value violates unique constraint');
 	});
 

@@ -26,9 +26,13 @@ type OrganizerMeetingRow = Omit<
 
 function outcomeHistory(agenda: OrganizerVote[]): OutcomeHistoryEntry[] {
 	const rerunChildren = new Map<string, string[]>();
+
 	for (const vote of agenda) {
-		if (!vote.rerunOfVoteId) continue;
+		if (!vote.rerunOfVoteId) {
+			continue;
+		}
 		const children = rerunChildren.get(vote.rerunOfVoteId) ?? [];
+
 		children.push(vote.id);
 		rerunChildren.set(vote.rerunOfVoteId, children);
 	}
@@ -56,31 +60,35 @@ function outcomeHistory(agenda: OrganizerVote[]): OutcomeHistoryEntry[] {
 				rerunVoteIds: rerunChildren.get(vote.id) ?? [],
 				resolution: vote.resolution ?? null
 			};
+
 			if (document.outcome.kind === 'decision') {
-				if (!('support' in document.counts))
+				if (!('support' in document.counts)) {
 					throw new Error('Decision history has Selection counts.');
-				if (document.vote.kind !== 'decision')
+				}
+				if (document.vote.kind !== 'decision') {
 					throw new Error('Decision history has Selection Vote.');
-				return {
-					...common,
+				}
+
+				return Object.assign(common, {
 					kind: 'decision' as const,
 					outcome: document.outcome,
 					counts: document.counts,
 					majorityRule: document.vote.decision.majorityRule,
 					abstentionsCounted: document.vote.decision.abstentionsCounted
-				};
+				});
 			}
-			if (!('options' in document.counts))
+			if (!('options' in document.counts)) {
 				throw new Error('Selection history has Decision counts.');
-			return {
-				...common,
+			}
+
+			return Object.assign(common, {
 				kind: 'selection' as const,
 				outcome: {
 					kind: 'selection' as const,
 					...applyIncompleteResolution(document.outcome, vote.resolution)
 				},
 				counts: document.counts
-			};
+			});
 		});
 }
 

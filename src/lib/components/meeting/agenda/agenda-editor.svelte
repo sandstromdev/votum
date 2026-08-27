@@ -73,6 +73,7 @@
 	function openEditor(action: () => void) {
 		if (!formOpen || !editorDirty) {
 			action();
+
 			return;
 		}
 
@@ -91,8 +92,12 @@
 	async function moveVote(vote: OrganizerVote, direction: -1 | 1) {
 		const index = draftVotes.findIndex((draftVote) => draftVote.id === vote.id);
 		const nextIndex = index + direction;
-		if (index < 0 || nextIndex < 0 || nextIndex >= draftVotes.length || busy) return;
+
+		if (index < 0 || nextIndex < 0 || nextIndex >= draftVotes.length || busy) {
+			return;
+		}
 		const orderedVoteIds = draftVotes.map((draftVote) => draftVote.id);
+
 		[orderedVoteIds[index], orderedVoteIds[nextIndex]] = [
 			orderedVoteIds[nextIndex],
 			orderedVoteIds[index]
@@ -110,7 +115,9 @@
 	}
 
 	function removeVote(vote: OrganizerVote) {
-		if (busy) return;
+		if (busy) {
+			return;
+		}
 		openConfirmDialog({
 			title: 'Ta bort omröstning',
 			description: `Ta bort "${vote.title}" från agendan?`,
@@ -125,9 +132,12 @@
 		try {
 			await deleteVote({ meetingId: meeting.id, voteId: vote.id });
 			await refreshAll();
-			if (editingVoteId === vote.id) closeEditor();
+			if (editingVoteId === vote.id) {
+				closeEditor();
+			}
 		} catch (error) {
 			errorMessage = 'Omröstningen kunde inte tas bort.';
+
 			throw error;
 		} finally {
 			busy = false;

@@ -4,7 +4,6 @@
 	import ParticipantVote from '#lib/components/vote/participant.svelte';
 	import StatusPage from '#lib/components/status-page.svelte';
 	import { participantMeetingLive } from '#lib/remotes/meeting.remote.js';
-	import type { ParticipantProjection } from '#lib/vote/meeting.js';
 	import { refreshAll } from '$app/navigation';
 	import { onDestroy } from 'svelte';
 
@@ -17,10 +16,17 @@
 	const publicLocator = $derived(data.publicLocator);
 	const projection = $derived.by(() => {
 		const live = liveProjection?.current;
-		if (!live) return data.projection;
-		if (live.state === 'invalid')
+
+		if (!live) {
+			return data.projection;
+		}
+		if (live.state === 'invalid') {
 			return data.projection.state === 'invalid' ? live : data.projection;
-		if (data.projection.state === 'invalid') return live;
+		}
+		if (data.projection.state === 'invalid') {
+			return live;
+		}
+
 		return live.revision >= data.projection.revision ? live : data.projection;
 	});
 	let checking = $state(false);
@@ -31,12 +37,16 @@
 	const liveUnavailable = $derived(Boolean(liveProjection?.done || liveProjection?.error));
 
 	function stopPolling() {
-		if (pollTimer) clearTimeout(pollTimer);
+		if (pollTimer) {
+			clearTimeout(pollTimer);
+		}
 		pollTimer = undefined;
 	}
 
 	function schedulePolling() {
-		if (pollTimer || liveProjection?.connected || !liveUnavailable) return;
+		if (pollTimer || liveProjection?.connected || !liveUnavailable) {
+			return;
+		}
 
 		pollTimer = setTimeout(async () => {
 			pollTimer = undefined;
@@ -51,23 +61,19 @@
 	}
 
 	$effect(() => {
-		if (liveProjection?.connected) stopPolling();
-		else if (liveUnavailable) schedulePolling();
+		if (liveProjection?.connected) {
+			stopPolling();
+		} else if (liveUnavailable) {
+			schedulePolling();
+		}
 	});
 
 	onDestroy(stopPolling);
 
-	function participantPageTitle(projection: ParticipantProjection) {
-		if (projection.state === 'invalid') return 'Ogiltig möteslänk';
-		if (projection.state === 'ended') return `${projection.meeting.title} | Mötet är avslutat`;
-		if (projection.state === 'closed') return `${projection.vote.title} | Omröstningen är stängd`;
-		if (projection.state === 'active')
-			return `${projection.vote.title} | ${projection.meeting.title}`;
-		return `${projection.meeting.title} | Väntar på nästa omröstning`;
-	}
-
 	async function checkForUpdates() {
-		if (checking) return;
+		if (checking) {
+			return;
+		}
 		checking = true;
 		updateError = null;
 		try {
@@ -83,7 +89,22 @@
 		location.reload();
 	}
 
-	const pageTitle = $derived(participantPageTitle(projection));
+	const pageTitle = $derived.by(() => {
+		if (projection.state === 'invalid') {
+			return 'Ogiltig möteslänk';
+		}
+		if (projection.state === 'ended') {
+			return `${projection.meeting.title} | Mötet är avslutat`;
+		}
+		if (projection.state === 'closed') {
+			return `${projection.vote.title} | Omröstningen är stängd`;
+		}
+		if (projection.state === 'active') {
+			return `${projection.vote.title} | ${projection.meeting.title}`;
+		}
+
+		return `${projection.meeting.title} | Väntar på nästa omröstning`;
+	});
 </script>
 
 <svelte:head>

@@ -2,13 +2,9 @@
 	import { Button } from '#lib/components/ui/button/index.js';
 	import CreateMeetingDialog from '#lib/components/meeting/create-meeting-dialog.svelte';
 	import { getOrganizerMeetings } from '#lib/remotes/meeting.remote.js';
-	import type { MeetingLifecycle } from '#lib/vote/meeting.js';
+	import { LIFECYCLE_LABELS } from '#lib/vote/meeting.js';
 
 	const meetings = $derived(await getOrganizerMeetings());
-
-	function lifecycleLabel(lifecycle: MeetingLifecycle) {
-		return lifecycle === 'draft' ? 'Inte öppnat' : lifecycle === 'open' ? 'Öppet' : 'Avslutat';
-	}
 </script>
 
 <svelte:head>
@@ -46,7 +42,7 @@
 						<div class="flex items-start justify-between gap-4">
 							<div class="min-w-0">
 								<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-									{lifecycleLabel(meeting.lifecycle)}
+									{LIFECYCLE_LABELS[meeting.lifecycle]}
 								</p>
 								<a
 									class="mt-1 block truncate text-lg font-semibold underline-offset-4 hover:underline"

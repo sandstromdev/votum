@@ -33,6 +33,7 @@ async function advanceMeetingAndRead(tx: OutcomeTransaction, meetingId: string) 
 		.set({ revision: sql`${meeting.revision} + 1` })
 		.where(eq(meeting.id, meetingId))
 		.returning(organizerMeetingColumns);
+
 	return {
 		value: mapOrganizerMeeting(updated, await readAgendaForMeeting(tx, meetingId)),
 		revision: updated.revision
@@ -46,7 +47,9 @@ export async function invalidateVote({
 	reason,
 	expectedRevision
 }: InvalidateVoteCommand) {
-	if (!reason.trim()) return null;
+	if (!reason.trim()) {
+		return null;
+	}
 	// Lock the meeting before invalidation so it cannot overlap ballot writes, Close, or Reveal.
 	const committed = await db.transaction(async (tx) => {
 		const [ownedMeeting] = await tx
@@ -62,7 +65,10 @@ export async function invalidateVote({
 			)
 			.for('update')
 			.limit(1);
-		if (!ownedMeeting) return null;
+
+		if (!ownedMeeting) {
+			return null;
+		}
 
 		const [candidate] = await tx
 			.select({ lifecycle: vote.lifecycle, revealed: vote.revealed })
@@ -76,7 +82,10 @@ export async function invalidateVote({
 			)
 			.for('update')
 			.limit(1);
-		if (!candidate) return null;
+
+		if (!candidate) {
+			return null;
+		}
 
 		await tx
 			.update(vote)
@@ -91,8 +100,10 @@ export async function invalidateVote({
 		return advanceMeetingAndRead(tx, meetingId);
 	});
 
-	if (committed)
+	if (committed) {
 		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
+	}
+
 	return committed?.value ?? null;
 }
 
@@ -138,7 +149,10 @@ export async function rerunVote({
 			)
 			.for('update')
 			.limit(1);
-		if (!ownedMeeting) return null;
+
+		if (!ownedMeeting) {
+			return null;
+		}
 
 		const [sourceRow] = await tx
 			.select()
@@ -152,17 +166,26 @@ export async function rerunVote({
 			)
 			.for('update')
 			.limit(1);
-		if (!sourceRow) return null;
+
+		if (!sourceRow) {
+			return null;
+		}
 
 		const [activeVote] = await tx
 			.select({ id: vote.id })
 			.from(vote)
 			.where(and(eq(vote.meetingId, meetingId), eq(vote.lifecycle, 'open')))
 			.limit(1);
-		if (activeVote) return null;
+
+		if (activeVote) {
+			return null;
+		}
 
 		const [source] = await readAgenda(tx, [sourceRow]);
-		if (!source) throw new Error('Rerun source Vote is missing its configuration.');
+
+		if (!source) {
+			throw new Error('Rerun source Vote is missing its configuration.');
+		}
 		const [lastVote] = await tx
 			.select({ position: vote.position })
 			.from(vote)
@@ -182,11 +205,14 @@ export async function rerunVote({
 			.returning();
 
 		await insertVoteConfiguration(tx, created.id, voteToConfiguration(source));
+
 		return advanceMeetingAndRead(tx, meetingId);
 	});
 
-	if (committed)
+	if (committed) {
 		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
+	}
+
 	return committed?.value ?? null;
 }
 
@@ -213,7 +239,10 @@ export async function resolveIncompleteVote({
 			)
 			.for('update')
 			.limit(1);
-		if (!ownedMeeting) return null;
+
+		if (!ownedMeeting) {
+			return null;
+		}
 
 		const [closedVote] = await tx
 			.select({ id: vote.id, revealed: vote.revealed })
@@ -221,21 +250,29 @@ export async function resolveIncompleteVote({
 			.where(and(eq(vote.id, voteId), eq(vote.meetingId, meetingId), eq(vote.lifecycle, 'closed')))
 			.for('update')
 			.limit(1);
-		if (!closedVote || closedVote.revealed) return null;
+
+		if (!closedVote || closedVote.revealed) {
+			return null;
+		}
 
 		const snapshot = (await readOutcomeSnapshots(tx, [voteId])).get(voteId);
+
 		if (
 			!snapshot ||
 			snapshot.document.outcome.kind !== 'selection' ||
 			snapshot.document.outcome.state !== 'incomplete'
-		)
+		) {
 			return null;
+		}
 		const [rerun] = await tx
 			.select({ id: vote.id })
 			.from(vote)
 			.where(and(eq(vote.meetingId, meetingId), eq(vote.rerunOfVoteId, voteId)))
 			.limit(1);
-		if (rerun) return null;
+
+		if (rerun) {
+			return null;
+		}
 
 		const resolvedAt = new Date();
 		const [existing] = await tx
@@ -243,6 +280,7 @@ export async function resolveIncompleteVote({
 			.from(outcomeResolution)
 			.where(eq(outcomeResolution.voteId, voteId))
 			.limit(1);
+
 		if (existing) {
 			await tx
 				.update(outcomeResolution)
@@ -260,7 +298,9 @@ export async function resolveIncompleteVote({
 		return advanceMeetingAndRead(tx, meetingId);
 	});
 
-	if (committed)
+	if (committed) {
 		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
+	}
+
 	return committed?.value ?? null;
 }

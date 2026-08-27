@@ -111,12 +111,14 @@ class MeetingPubSub {
 			}
 
 			const resolve = resolveWait;
+
 			resolveWait = undefined;
 			resolve?.();
 		}
 
 		function onAbort() {
 			const resolve = resolveWait;
+
 			resolveWait = undefined;
 			resolve?.();
 		}
@@ -177,6 +179,7 @@ class MeetingPubSub {
 			if (update.sourceCorrelationId !== undefined) {
 				pending.sourceCorrelationId = update.sourceCorrelationId;
 			}
+
 			return;
 		}
 
@@ -199,12 +202,14 @@ class MeetingPubSub {
 	) {
 		if (update.kind !== 'ballot-activity') {
 			this.#publish(meetingId, update);
+
 			return;
 		}
 
 		const timing = inputTiming ?? createTimingContext();
 		const sourceCorrelationId = inputTiming?.correlationId;
 		const startedAt = timingStart(timing, 'ballot.publishBallotActivity');
+
 		try {
 			this.#publish(meetingId, {
 				...update,
@@ -213,17 +218,22 @@ class MeetingPubSub {
 			timingEnd(timing, 'ballot.publishBallotActivity', startedAt, 'success');
 		} catch (error) {
 			timingEnd(timing, 'ballot.publishBallotActivity', startedAt, 'error');
+
 			throw error;
 		}
 	}
 
 	#flush(meetingId: MeetingId) {
 		const pending = this.#pending.get(meetingId);
-		if (!pending) return;
+
+		if (!pending) {
+			return;
+		}
 
 		this.#pending.delete(meetingId);
 
 		const channel = this.#channels.get(meetingId);
+
 		if (!channel) {
 			return;
 		}
@@ -235,11 +245,15 @@ class MeetingPubSub {
 		}
 
 		const remove = new Set<SubscriberId>();
+		const subscribers = [...channel.values()];
 
-		for (const subscriber of [...channel.values()]) {
+		for (const subscriber of subscribers) {
 			try {
 				const receivesBallotActivity = subscriber.options.ballotActivity === true;
-				if (revision === undefined && !receivesBallotActivity) continue;
+
+				if (revision === undefined && !receivesBallotActivity) {
+					continue;
+				}
 
 				if (revision === undefined) {
 					subscriber.subscribeFn({
@@ -282,6 +296,7 @@ class MeetingPubSub {
 		this.#channels.delete(channelId);
 
 		const pending = this.#pending.get(channelId);
+
 		if (pending) {
 			clearTimeout(pending.timer);
 			this.#pending.delete(channelId);

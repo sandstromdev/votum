@@ -22,11 +22,13 @@ export function createServerTestContext() {
 
 		async insertOrganizer() {
 			const id = randomUUID();
+
 			await sql`
 				INSERT INTO "user" (id, name, email, email_verified, created_at, updated_at)
 				VALUES (${id}, 'Organizer', ${`${id}@example.test`}, true, now(), now())
 			`;
 			createdOrganizerIds.push(id);
+
 			return id;
 		},
 
@@ -36,12 +38,17 @@ export function createServerTestContext() {
 
 		async getMeetingRevision(meetingId: string) {
 			const [row] = await sql`SELECT revision FROM meeting WHERE id = ${meetingId}`;
-			if (!row) throw new Error('Expected the Meeting to exist');
+
+			if (!row) {
+				throw new Error('Expected the Meeting to exist');
+			}
+
 			return Number(row.revision);
 		},
 
 		async cleanup() {
 			const meetingIds = createdMeetingIds.splice(0);
+
 			if (meetingIds.length > 0) {
 				await sql.begin(async (transaction) => {
 					const ids = sql.array(meetingIds);
@@ -62,6 +69,7 @@ export function createServerTestContext() {
 			}
 
 			const organizerIds = createdOrganizerIds.splice(0);
+
 			if (organizerIds.length > 0) {
 				await sql`DELETE FROM "user" WHERE id = ANY(${sql.array(organizerIds)}::text[])`;
 			}

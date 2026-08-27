@@ -66,6 +66,7 @@ describe('Vote schemas', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
+
 		expect(decision.abstentionsCounted).toBe(false);
 
 		const selection = draftVoteSchema.parse({
@@ -75,6 +76,7 @@ describe('Vote schemas', () => {
 			positionCount: 1,
 			options: ['Ada']
 		});
+
 		expect(selection.vacancyEnabled).toBe(false);
 	});
 

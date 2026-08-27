@@ -13,6 +13,7 @@ function parseDatabaseUrl(databaseUrl: string | undefined) {
 	}
 
 	let url: URL;
+
 	try {
 		url = new URL(databaseUrl);
 	} catch {
@@ -36,10 +37,16 @@ function normalizedHostname(url: URL) {
 
 export function assertSafeDatabaseUrl({ databaseUrl, allowRemote = false }: DatabaseSafetyOptions) {
 	const url = parseDatabaseUrl(databaseUrl);
-	if (allowRemote) return;
+
+	if (allowRemote) {
+		return;
+	}
 
 	const hostname = normalizedHostname(url);
-	if (localDatabaseHosts.has(hostname)) return;
+
+	if (localDatabaseHosts.has(hostname)) {
+		return;
+	}
 
 	throw new Error(
 		`Refusing to use remote database at ${hostname}. Use ${allowRemoteDatabaseFlag} only when this is intentional.`

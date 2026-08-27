@@ -1,4 +1,4 @@
-import z from 'zod';
+import { z } from 'zod';
 import { DECISION_BALLOT_CHOICES } from '#lib/vote/ballot.js';
 
 export const storedBallotPayloadSchema = z.discriminatedUnion('type', [

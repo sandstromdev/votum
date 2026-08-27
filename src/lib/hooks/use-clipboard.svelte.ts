@@ -44,11 +44,13 @@ export async function copyText(text: string): Promise<'success' | 'failure'> {
 	try {
 		if (navigator.clipboard && window.isSecureContext) {
 			await navigator.clipboard.writeText(text);
+
 			return 'success';
 		}
 
 		// Fall back to execCommand when the Clipboard API is unavailable.
 		const textArea = document.createElement('textarea');
+
 		textArea.value = text;
 		textArea.style.position = 'fixed';
 		textArea.style.top = '0';
@@ -57,6 +59,7 @@ export async function copyText(text: string): Promise<'success' | 'failure'> {
 		textArea.focus();
 		textArea.select();
 
+		// oxlint-disable-next-line typescript/no-deprecated
 		const successful = document.execCommand('copy');
 
 		document.body.removeChild(textArea);

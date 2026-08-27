@@ -10,7 +10,10 @@
 	}: { projection: PresentationProjection; participantLink: string } = $props();
 
 	function participationLabel(current: number, expected: number | null) {
-		if (expected) return `${current} av ${expected} deltagare har röstat`;
+		if (expected) {
+			return `${current} av ${expected} deltagare har röstat`;
+		}
+
 		return `${current} deltagare har röstat`;
 	}
 

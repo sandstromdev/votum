@@ -25,6 +25,7 @@ describe('live Meeting snapshots', () => {
 
 			revision = 2;
 			const pending = stream.next();
+
 			meetingPubSub.publish('meeting-1', { kind: 'revision', revision: 2 });
 			await vi.runOnlyPendingTimersAsync();
 			revision = 4;
@@ -73,6 +74,7 @@ describe('live Meeting snapshots', () => {
 		const controller = new AbortController();
 		const events: TimingEvent[] = [];
 		const previous = process.env.VOTUM_TIMINGS;
+
 		process.env.VOTUM_TIMINGS = '1';
 		let count = 0;
 
@@ -103,6 +105,7 @@ describe('live Meeting snapshots', () => {
 			const rereadEnd = events.find(
 				(event) => event.operation === 'organizer.reread' && event.phase === 'end'
 			);
+
 			expect(rereadEnd).toMatchObject({
 				correlationId: organizerTiming.correlationId,
 				sourceCorrelationId: sourceTiming.correlationId
@@ -111,8 +114,11 @@ describe('live Meeting snapshots', () => {
 			controller.abort();
 			await stream.return(undefined);
 		} finally {
-			if (previous === undefined) delete process.env.VOTUM_TIMINGS;
-			else process.env.VOTUM_TIMINGS = previous;
+			if (previous === undefined) {
+				delete process.env.VOTUM_TIMINGS;
+			} else {
+				process.env.VOTUM_TIMINGS = previous;
+			}
 			vi.useRealTimers();
 		}
 	});
@@ -135,6 +141,7 @@ describe('live Meeting snapshots', () => {
 			expect(await stream.next()).toEqual({ value: { revision: 1, reads: 1 }, done: false });
 
 			const pending = stream.next();
+
 			meetingPubSub.publish('meeting-1', { kind: 'ballot-activity' });
 			await vi.runOnlyPendingTimersAsync();
 			expect(reads).toBe(1);
@@ -161,6 +168,7 @@ describe('live Meeting snapshots', () => {
 
 		expect(await stream.next()).toEqual({ value: { revision: 1 }, done: false });
 		const pending = stream.next();
+
 		controller.abort();
 		expect(await pending).toEqual({ value: undefined, done: true });
 	});
@@ -183,6 +191,7 @@ describe('live Meeting snapshots', () => {
 
 			const pending = stream.next();
 			let completed = false;
+
 			void pending.then(() => {
 				completed = true;
 			});

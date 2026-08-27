@@ -48,12 +48,15 @@ export async function upsertCurrentBallot(
 		.limit(1);
 
 	if (currentBallot) {
-		if (equalStoredBallotPayload(currentBallot.payload, payload)) return { kind: 'unchanged' };
+		if (equalStoredBallotPayload(currentBallot.payload, payload)) {
+			return { kind: 'unchanged' };
+		}
 
 		await tx
 			.update(ballot)
 			.set({ payload, updatedAt: new Date() })
 			.where(eq(ballot.id, currentBallot.id));
+
 		return { kind: 'replaced' };
 	}
 
@@ -68,7 +71,10 @@ export async function upsertCurrentBallot(
 		})
 		.onConflictDoNothing()
 		.returning({ id: ballot.id });
-	if (inserted) return { kind: 'inserted' };
+
+	if (inserted) {
+		return { kind: 'inserted' };
+	}
 
 	const [racedBallot] = await tx
 		.select({ id: ballot.id, payload: ballot.payload })
@@ -76,12 +82,18 @@ export async function upsertCurrentBallot(
 		.where(and(eq(ballot.voteId, voteId), eq(ballot.participantTokenId, participantTokenId)))
 		.for('update')
 		.limit(1);
-	if (!racedBallot) throw new Error('Ballot disappeared after a unique-key race.');
-	if (equalStoredBallotPayload(racedBallot.payload, payload)) return { kind: 'unchanged' };
+
+	if (!racedBallot) {
+		throw new Error('Ballot disappeared after a unique-key race.');
+	}
+	if (equalStoredBallotPayload(racedBallot.payload, payload)) {
+		return { kind: 'unchanged' };
+	}
 
 	await tx
 		.update(ballot)
 		.set({ payload, updatedAt: new Date() })
 		.where(eq(ballot.id, racedBallot.id));
+
 	return { kind: 'replaced' };
 }

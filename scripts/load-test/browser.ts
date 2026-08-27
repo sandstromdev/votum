@@ -12,12 +12,16 @@ function ballotButton(page: Page) {
 
 async function createContextPage(browser: Browser, timeoutMs: number) {
 	const context = await browser.newContext();
+
 	try {
 		const page = await context.newPage();
+
 		page.setDefaultTimeout(timeoutMs);
+
 		return { context, page };
 	} catch (error) {
 		await context.close().catch(() => undefined);
+
 		throw error;
 	}
 }
@@ -30,6 +34,7 @@ async function waitForActiveVote(page: Page, timeoutMs: number) {
 async function choiceControlState(page: Page) {
 	const radios = page.getByRole('radio');
 	const radioStates: string[] = [];
+
 	for (let index = 0; index < (await radios.count()); index += 1) {
 		radioStates.push(
 			(await radios.nth(index).getAttribute('aria-checked')) ??
@@ -40,6 +45,7 @@ async function choiceControlState(page: Page) {
 
 	const checkboxes = page.getByRole('checkbox');
 	const checkboxStates: string[] = [];
+
 	for (let index = 0; index < (await checkboxes.count()); index += 1) {
 		checkboxStates.push(
 			(await checkboxes.nth(index).getAttribute('aria-checked')) ??
@@ -49,6 +55,7 @@ async function choiceControlState(page: Page) {
 	}
 
 	const submitButton = ballotButton(page).first();
+
 	return JSON.stringify({
 		radios: radioStates,
 		checkboxes: checkboxStates,
@@ -59,10 +66,14 @@ async function choiceControlState(page: Page) {
 async function waitForEnabled(page: Page, timeoutMs: number) {
 	const submitButton = ballotButton(page).first();
 	const deadline = Date.now() + timeoutMs;
+
 	while (Date.now() < deadline) {
-		if (await submitButton.isEnabled()) return true;
+		if (await submitButton.isEnabled()) {
+			return true;
+		}
 		await new Promise<void>((resolve) => setTimeout(resolve, 50));
 	}
+
 	return false;
 }
 
@@ -74,18 +85,26 @@ async function chooseBallot(page: Page, alternative: boolean, timeoutMs: number)
 	for (let attempt = 0; attempt < attempts; attempt += 1) {
 		const radios = page.getByRole('radio');
 		const radioCount = await radios.count();
+
 		if (radioCount > 0) {
 			const index = alternative && radioCount > 1 ? 1 : 0;
+
 			await radios.nth(index).click();
 		} else {
 			const checkboxes = page.getByRole('checkbox');
 			const checkboxCount = await checkboxes.count();
-			if (checkboxCount === 0) throw new Error('No ballot choice control was found.');
+
+			if (checkboxCount === 0) {
+				throw new Error('No ballot choice control was found.');
+			}
 			const index = alternative && checkboxCount > 1 ? 1 : 0;
+
 			await checkboxes.nth(index).click();
 		}
 
-		if (await waitForEnabled(page, attemptTimeoutMs)) return;
+		if (await waitForEnabled(page, attemptTimeoutMs)) {
+			return;
+		}
 		lastState = await choiceControlState(page);
 		await new Promise<void>((resolve) => setTimeout(resolve, 50));
 	}
@@ -102,23 +121,24 @@ export async function submitBallot(
 	samples: Sample[],
 	operation: 'submit' | 'replace'
 ) {
-	await measureOrThrow(samples, `${operation}_choice`, () =>
+	await measureOrThrow(samples, `${operation}_choice`, async () =>
 		chooseBallot(page, alternative, timeoutMs)
 	);
 
 	await measureOrThrow(samples, `${operation}_request`, async () => {
 		const [response] = await Promise.all([
-			page.waitForResponse((response) => response.request().method() === 'POST', {
+			page.waitForResponse((res) => res.request().method() === 'POST', {
 				timeout: timeoutMs
 			}),
 			ballotButton(page).first().click({ timeout: timeoutMs })
 		]);
+
 		if (!response.ok()) {
 			throw new Error(`Ballot form request failed with HTTP ${response.status()}.`);
 		}
 	});
 
-	await measureOrThrow(samples, `${operation}_stabilization`, () =>
+	await measureOrThrow(samples, `${operation}_stabilization`, async () =>
 		page
 			.getByRole('button', { name: /^Ta tillbaka/ })
 			.first()
@@ -154,18 +174,23 @@ export async function createParticipant(
 ): Promise<Participant | undefined> {
 	const result = await measure(samples, 'initial_read', async () => {
 		let context: BrowserContext | undefined;
+
 		try {
 			const created = await createContextPage(browser, config.timeoutMs);
+
 			context = created.context;
 			const { page } = created;
+
 			await page.goto(meetingUrl(config, 'm'), {
 				waitUntil: 'domcontentloaded',
 				timeout: config.timeoutMs
 			});
 			await waitForActiveVote(page, config.timeoutMs);
+
 			return { index, context, page, ballotSubmitted: false } satisfies Participant;
 		} catch (error) {
 			await context?.close().catch(() => undefined);
+
 			throw error;
 		}
 	});
@@ -180,15 +205,18 @@ export async function openPresentation(
 ): Promise<BrowserContext | undefined> {
 	const result = await measure(samples, 'presentation_read', async () => {
 		const { context, page } = await createContextPage(browser, config.timeoutMs);
+
 		try {
 			await page.goto(meetingUrl(config, 'p'), {
 				waitUntil: 'domcontentloaded',
 				timeout: config.timeoutMs
 			});
 			await page.getByRole('main').waitFor({ state: 'visible', timeout: config.timeoutMs });
+
 			return context;
 		} catch (error) {
 			await context.close().catch(() => undefined);
+
 			throw error;
 		}
 	});

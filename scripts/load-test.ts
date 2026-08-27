@@ -4,6 +4,7 @@ import { run } from './load-test/run.js';
 
 try {
 	const result = parseConfig(process.argv.slice(2));
+
 	if (result.kind === 'help') {
 		console.info(result.usage);
 	} else {

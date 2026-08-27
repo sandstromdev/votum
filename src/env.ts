@@ -1,6 +1,6 @@
 import { building } from '$app/env';
 import { defineEnvVars } from '@sveltejs/kit/env';
-import z from 'zod';
+import { z } from 'zod';
 
 function buildOptional<T extends z.ZodType>(schema: T) {
 	// Env vars arrive when the container starts. During `vite build`, `building` is true so these schemas stay optional.

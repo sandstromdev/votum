@@ -34,6 +34,7 @@ describe('Agenda commands', () => {
 			title: 'Årsmöte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		const added = await addDraftVote({
@@ -69,6 +70,7 @@ describe('Agenda commands', () => {
 			title: 'Valmöte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		const added = await addDraftVote({
@@ -103,6 +105,7 @@ describe('Agenda commands', () => {
 			title: 'Agenda',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		const first = await addDraftVote({
@@ -116,7 +119,10 @@ describe('Agenda commands', () => {
 			majorityRule: 'qualified',
 			abstentionsCounted: true
 		});
-		if (!first) throw new Error('Expected the first draft Vote to be created');
+
+		if (!first) {
+			throw new Error('Expected the first draft Vote to be created');
+		}
 		const second = await addDraftVote({
 			organizerUserId,
 			meetingId: created.id,
@@ -126,7 +132,10 @@ describe('Agenda commands', () => {
 			opposeLabel: 'Nej',
 			abstentionLabel: 'Avstår'
 		});
-		if (!second) throw new Error('Expected the second draft Vote to be created');
+
+		if (!second) {
+			throw new Error('Expected the second draft Vote to be created');
+		}
 
 		const updated = await editDraftVote({
 			organizerUserId,
@@ -138,6 +147,7 @@ describe('Agenda commands', () => {
 			vacancyEnabled: true,
 			options: ['Alternativ A', 'Alternativ B']
 		});
+
 		await reorderDraftVotes({
 			organizerUserId,
 			meetingId: created.id,
@@ -159,6 +169,7 @@ describe('Agenda commands', () => {
 			title: 'Agenda',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -169,7 +180,10 @@ describe('Agenda commands', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!vote) throw new Error('Expected the draft Vote to be created');
+
+		if (!vote) {
+			throw new Error('Expected the draft Vote to be created');
+		}
 
 		expect(
 			await removeDraftVote({
@@ -191,6 +205,7 @@ describe('Agenda commands', () => {
 			title: 'Agenda',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		const added = await saveDraftVote({
@@ -202,7 +217,10 @@ describe('Agenda commands', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!added) throw new Error('Expected the draft Vote to be created');
+
+		if (!added) {
+			throw new Error('Expected the draft Vote to be created');
+		}
 
 		const updated = await saveDraftVote({
 			organizerUserId,
@@ -225,6 +243,7 @@ describe('Agenda commands', () => {
 			title: 'Pågående',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -235,7 +254,10 @@ describe('Agenda commands', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!vote) throw new Error('Expected the draft Vote to be created');
+
+		if (!vote) {
+			throw new Error('Expected the draft Vote to be created');
+		}
 		await sql`
 				UPDATE vote
 				SET lifecycle = 'open', opened_at = now()

@@ -60,7 +60,9 @@ describe('load-test config', () => {
 		});
 
 		expect(result.kind).toBe('config');
-		if (result.kind !== 'config') return;
+		if (result.kind !== 'config') {
+			return;
+		}
 		expect(result.config.users).toBe(8);
 		expect(result.config.meetingLocator).toBe('env-locator');
 		expect(result.config.submitRampMs).toBe(5000);
@@ -72,7 +74,9 @@ describe('load-test config', () => {
 		const result = parseConfig(['--help']);
 
 		expect(result.kind).toBe('help');
-		if (result.kind !== 'help') return;
+		if (result.kind !== 'help') {
+			return;
+		}
 		expect(result.usage).toContain('Examples:');
 	});
 

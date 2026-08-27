@@ -70,6 +70,7 @@ Examples:
 
 function defaultReportFile() {
 	const timestamp = new Date().toISOString().replace(/[.:]/g, '-');
+
 	return `load-test-report-${timestamp}.json`;
 }
 
@@ -82,11 +83,13 @@ function readString(
 ) {
 	const flagValue = flags[name];
 	const value = typeof flagValue === 'string' ? flagValue : environment[environmentName];
+
 	if (!value?.trim() && required) {
 		throw new Error(
 			`Missing --${name}. Set ${environmentName} or pass --${name}. Use --help for an example.`
 		);
 	}
+
 	return value?.trim() ?? '';
 }
 
@@ -101,9 +104,11 @@ function readInteger(
 	const flagValue = flags[name];
 	const rawValue = typeof flagValue === 'string' ? flagValue : environment[environmentName];
 	const value = rawValue === undefined ? defaultValue : Number(rawValue);
+
 	if (!Number.isInteger(value) || value < minimum) {
 		throw new Error(`--${name} must be an integer greater than or equal to ${minimum}.`);
 	}
+
 	return value;
 }
 
@@ -115,7 +120,11 @@ function readPercent(
 	environment: Environment
 ) {
 	const value = readInteger(flags, name, environmentName, defaultValue, 0, environment);
-	if (value > 100) throw new Error(`--${name} must be between 0 and 100.`);
+
+	if (value > 100) {
+		throw new Error(`--${name} must be between 0 and 100.`);
+	}
+
 	return value;
 }
 
@@ -124,6 +133,7 @@ function parseValues(tokens: readonly string[]) {
 		return parseArgs({ args: tokens, options, allowPositionals: false, strict: true }).values;
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
+
 		throw new Error(`Invalid command-line arguments: ${message} Use --help for usage.`, {
 			cause: error
 		});
@@ -135,7 +145,10 @@ export function parseConfig(
 	environment: Environment = process.env
 ): ConfigParseResult {
 	const flags: CliValues = parseValues(tokens);
-	if (flags.help === true) return { kind: 'help', usage: usageText() };
+
+	if (flags.help === true) {
+		return { kind: 'help', usage: usageText() };
+	}
 
 	const baseUrl = readString(flags, 'base-url', 'LOAD_TEST_BASE_URL', true, environment);
 	const meetingLocator = readString(
@@ -146,6 +159,7 @@ export function parseConfig(
 		environment
 	);
 	let parsedBaseUrl: URL;
+
 	try {
 		parsedBaseUrl = new URL(baseUrl);
 	} catch {
@@ -201,12 +215,14 @@ export function parseConfig(
 		DEFAULTS.withdrawPercent,
 		environment
 	);
+
 	if (readPercentSetting + replacePercent + withdrawPercent > 100) {
 		throw new Error('read-percent + replace-percent + withdraw-percent must not exceed 100.');
 	}
 
 	const dryRun = flags['dry-run'] === true;
 	const allowWrites = flags['allow-writes'] === true;
+
 	if (!dryRun && !allowWrites) {
 		throw new Error(
 			'Ballot writes are disabled by default. Add --allow-writes when targeting a dedicated test Meeting.'

@@ -39,6 +39,7 @@ describe('Meeting commands', () => {
 			title: 'Årsmöte',
 			expectedParticipantCount: 42
 		});
+
 		context.trackMeetings(created.id);
 
 		expect(created).toMatchObject({
@@ -54,6 +55,7 @@ describe('Meeting commands', () => {
 		expect(created.publicLocator).not.toMatch(/[ilu]/);
 
 		const meetings = await listOrganizerMeetings(organizerUserId);
+
 		expect(meetings).toHaveLength(1);
 		expect(meetings[0]).toMatchObject({ id: created.id, title: 'Årsmöte' });
 
@@ -62,6 +64,7 @@ describe('Meeting commands', () => {
 			title: 'Extra möte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(second.id);
 		expect(second.publicLocator).not.toBe(created.publicLocator);
 	});
@@ -73,6 +76,7 @@ describe('Meeting commands', () => {
 			title: 'Årsmöte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		await addDraftVote({
 			organizerUserId,
@@ -102,6 +106,7 @@ describe('Meeting commands', () => {
 			title: 'Privat möte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		expect(
@@ -122,6 +127,7 @@ describe('Meeting commands', () => {
 			title: 'Redan öppet',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		expect(await openMeeting({ organizerUserId, meetingId: created.id })).toMatchObject({
 			lifecycle: 'open',
@@ -139,6 +145,7 @@ describe('Meeting commands', () => {
 			title: 'Årsmöte',
 			expectedParticipantCount: 12
 		});
+
 		context.trackMeetings(created.id);
 		const first = await addDraftVote({
 			organizerUserId,
@@ -149,6 +156,7 @@ describe('Meeting commands', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
+
 		await addDraftVote({
 			organizerUserId,
 			meetingId: created.id,
@@ -158,7 +166,9 @@ describe('Meeting commands', () => {
 			opposeLabel: 'Nej',
 			abstentionLabel: 'Avstår'
 		});
-		if (!first) throw new Error('Expected the first draft Vote to be created');
+		if (!first) {
+			throw new Error('Expected the first draft Vote to be created');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: created.id });
 		const activated = await activateVote({
@@ -204,6 +214,7 @@ describe('Meeting commands', () => {
 			title: 'Agenda i ordning',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		const first = await addDraftVote({
 			organizerUserId,
@@ -223,7 +234,10 @@ describe('Meeting commands', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!first || !second) throw new Error('Expected two draft Votes to be created');
+
+		if (!first || !second) {
+			throw new Error('Expected two draft Votes to be created');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: created.id });
 		expect(
@@ -240,6 +254,7 @@ describe('Meeting commands', () => {
 			await closeVote({ organizerUserId, meetingId: created.id, voteId: first.id })
 		).toBeNull();
 		const closed = await closeVote({ organizerUserId, meetingId: created.id, voteId: second.id });
+
 		expect(closed).toMatchObject({ lifecycle: 'open', revision: 5 });
 		expect(await getParticipantProjection(created.publicLocator)).toMatchObject({
 			state: 'closed',
@@ -247,10 +262,12 @@ describe('Meeting commands', () => {
 		});
 
 		const next = await activateNextVote({ organizerUserId, meetingId: created.id });
+
 		expect(next).toMatchObject({ revision: 6 });
 		expect(next?.agenda.find(({ id }) => id === first.id)).toMatchObject({ lifecycle: 'open' });
 		await closeVote({ organizerUserId, meetingId: created.id, voteId: first.id });
 		const ended = await endMeeting({ organizerUserId, meetingId: created.id });
+
 		expect(ended).toMatchObject({ lifecycle: 'closed', revision: 8 });
 		expect(await getParticipantProjection(created.publicLocator)).toMatchObject({
 			state: 'ended',
@@ -266,6 +283,7 @@ describe('Meeting commands', () => {
 			title: 'Stale kommandon',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -276,7 +294,10 @@ describe('Meeting commands', () => {
 			opposeLabel: 'Nej',
 			abstentionLabel: 'Avstår'
 		});
-		if (!vote) throw new Error('Expected a draft Vote to be created');
+
+		if (!vote) {
+			throw new Error('Expected a draft Vote to be created');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: created.id, expectedRevision: 1 });
 		expect(
@@ -320,6 +341,7 @@ describe('Meeting commands', () => {
 			title: 'Annat möte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id, otherMeeting.id);
 
 		expect(await deleteMeeting({ organizerUserId: otherOrganizerId, meetingId: created.id })).toBe(
@@ -339,6 +361,7 @@ describe('Meeting commands', () => {
 			title: 'Möte med agenda',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		await addDraftVote({
@@ -390,6 +413,7 @@ describe('Meeting commands', () => {
 			title: 'Möte med deltagardata',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		const vote = await addDraftVote({
@@ -401,7 +425,10 @@ describe('Meeting commands', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!vote) throw new Error('Expected a draft Vote to be created');
+
+		if (!vote) {
+			throw new Error('Expected a draft Vote to be created');
+		}
 
 		const participantTokenId = randomUUID();
 		const ballotId = randomUUID();
@@ -439,6 +466,7 @@ describe('Meeting commands', () => {
 				(SELECT count(*) FROM participant_token WHERE id = ${participantTokenId}) AS tokens,
 				(SELECT count(*) FROM ballot WHERE id = ${ballotId}) AS ballots
 		`;
+
 		expect({
 			tokens: Number(counts.tokens),
 			ballots: Number(counts.ballots)
@@ -449,6 +477,7 @@ describe('Meeting commands', () => {
 			FROM participant_token_anomaly
 			WHERE id = ${anomalyId}
 		`;
+
 		expect(anomaly).toEqual({ meeting_id: null, vote_id: null });
 		await sql`DELETE FROM participant_token_anomaly WHERE id = ${anomalyId}`;
 	});
@@ -460,6 +489,7 @@ describe('Meeting commands', () => {
 			title: 'Pågående möte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		await openMeeting({ organizerUserId, meetingId: created.id });
 
@@ -473,6 +503,7 @@ describe('Meeting commands', () => {
 			title: 'Budgetmöte',
 			expectedParticipantCount: 10
 		});
+
 		context.trackMeetings(created.id);
 
 		expect(
@@ -511,6 +542,7 @@ describe('Meeting commands', () => {
 			title: 'Möte med QR-kod',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		expect(
@@ -564,6 +596,7 @@ describe('Meeting commands', () => {
 			title: 'Privat möte',
 			expectedParticipantCount: 8
 		});
+
 		context.trackMeetings(created.id);
 
 		expect(
@@ -582,6 +615,7 @@ describe('Meeting commands', () => {
 			title: 'Avslutat möte',
 			expectedParticipantCount: 8
 		});
+
 		context.trackMeetings(created.id);
 
 		await sql`

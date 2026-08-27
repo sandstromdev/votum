@@ -34,6 +34,7 @@ export function selectionModeFromPositionCount(positionCount: number): Selection
 export function organizerVoteToDraftFields(vote?: OrganizerVote) {
 	const decision = vote?.kind === 'decision' ? vote.decision : undefined;
 	const selection = vote?.kind === 'selection' ? vote.selection : undefined;
+
 	return {
 		title: vote?.title ?? '',
 		kind: vote?.kind ?? 'decision',
@@ -50,20 +51,30 @@ export function organizerVoteToDraftFields(vote?: OrganizerVote) {
 
 export function draftInputToVoteConfiguration(parsed: DraftVoteInput): VoteConfiguration {
 	if (parsed.kind === 'decision') {
+		const { supportLabel, opposeLabel, abstentionLabel } = parsed;
+
+		if (!supportLabel || !opposeLabel || !abstentionLabel) {
+			throw new Error('Decision Vote is missing a required label.');
+		}
+
 		return {
 			kind: 'decision',
 			title: parsed.title,
 			decision: {
-				supportLabel: parsed.supportLabel!,
-				opposeLabel: parsed.opposeLabel!,
-				abstentionLabel: parsed.abstentionLabel!,
+				supportLabel,
+				opposeLabel,
+				abstentionLabel,
 				majorityRule: parsed.majorityRule ?? DEFAULT_MAJORITY_RULE,
 				abstentionsCounted: parsed.abstentionsCounted ?? false
 			}
 		};
 	}
 
-	const positionCount = parsed.positionCount!;
+	if (parsed.positionCount == null) {
+		throw new Error('Selection Vote is missing a position count.');
+	}
+	const positionCount = parsed.positionCount;
+
 	return {
 		kind: 'selection',
 		title: parsed.title,

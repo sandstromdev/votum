@@ -59,30 +59,43 @@ class ConfirmDialogController {
 	}
 
 	cancel(dialogId?: number) {
-		if (dialogId !== undefined && this.#dialog.id !== dialogId) return;
-		if (this.#dialog.loading) return;
+		if (dialogId !== undefined && this.#dialog.id !== dialogId) {
+			return;
+		}
+		if (this.#dialog.loading) {
+			return;
+		}
 
 		const onCancel = this.#dialog.options?.onCancel;
+
 		this.#clear();
 		onCancel?.();
 	}
 
 	requestCancel() {
-		if (this.#dialog.loading) return null;
+		if (this.#dialog.loading) {
+			return null;
+		}
 		this.#dialog.open = false;
+
 		return this.#dialog.id;
 	}
 
 	async confirm() {
 		const options = this.#dialog.options;
-		if (!options || this.#dialog.loading) return null;
+
+		if (!options || this.#dialog.loading) {
+			return null;
+		}
 
 		this.#dialog.loading = true;
 		try {
 			if (options.inputType) {
 				const reason = this.#dialog.reason.trim();
+
 				if (!reason) {
 					this.#dialog.loading = false;
+
 					return null;
 				}
 				await options.onConfirm(reason);
@@ -91,15 +104,19 @@ class ConfirmDialogController {
 			}
 			this.#dialog.open = false;
 			this.#dialog.loading = false;
+
 			return this.#dialog.id;
 		} catch {
 			this.#dialog.loading = false;
+
 			return null;
 		}
 	}
 
 	complete(dialogId: number) {
-		if (this.#dialog.id === dialogId) this.#clear();
+		if (this.#dialog.id === dialogId) {
+			this.#clear();
+		}
 	}
 
 	#clear() {
@@ -128,7 +145,7 @@ export function requestCancelConfirmDialog() {
 	return confirmDialogController.requestCancel();
 }
 
-export function confirmConfirmDialog() {
+export async function confirmConfirmDialog() {
 	return confirmDialogController.confirm();
 }
 

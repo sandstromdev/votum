@@ -1,4 +1,4 @@
-import z from 'zod';
+import { z } from 'zod';
 import { publicLocatorSchema } from '#lib/schemas/meeting.js';
 
 export const meetingLocatorQuerySchema = z.object({

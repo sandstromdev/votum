@@ -29,7 +29,10 @@ function createPublicLocator() {
 		buffer &= (1 << bits) - 1;
 	}
 
-	if (bits > 0) locator += PUBLIC_LOCATOR_ALPHABET[(buffer << (5 - bits)) & 31];
+	if (bits > 0) {
+		locator += PUBLIC_LOCATOR_ALPHABET[(buffer << (5 - bits)) & 31];
+	}
+
 	return locator;
 }
 
@@ -40,6 +43,7 @@ export async function createDraftMeeting({
 }: MeetingInput) {
 	for (let attempt = 0; attempt < 3; attempt += 1) {
 		const publicLocator = createPublicLocator();
+
 		try {
 			const [created] = await db
 				.insert(meeting)
@@ -54,7 +58,9 @@ export async function createDraftMeeting({
 
 			return mapOrganizerMeeting(created);
 		} catch (error) {
-			if (!isUniqueViolation(error) || attempt === 2) throw error;
+			if (!isUniqueViolation(error) || attempt === 2) {
+				throw error;
+			}
 		}
 	}
 
@@ -76,7 +82,9 @@ export async function deleteMeeting({ organizerUserId, meetingId }: MeetingLifec
 			.for('update')
 			.limit(1);
 
-		if (!candidate) return false;
+		if (!candidate) {
+			return false;
+		}
 
 		// RESTRICT protects finished history. Drafts are the only meetings whose child rows may be
 		// removed here, and the lifecycle check above is the guard.
@@ -102,6 +110,7 @@ export async function updateMeetingSettings({
 		mutate: async (tx) => {
 			const nextExpectedParticipantCount = settings.expectedParticipantCount;
 			const nextPresentationQrEnabled = settings.presentationQrEnabled;
+
 			if (nextExpectedParticipantCount === undefined && nextPresentationQrEnabled === undefined) {
 				return { value: true, changed: false };
 			}
@@ -114,13 +123,17 @@ export async function updateMeetingSettings({
 				.from(meeting)
 				.where(eq(meeting.id, meetingId))
 				.limit(1);
-			if (!current) return { value: false, changed: false };
+
+			if (!current) {
+				return { value: false, changed: false };
+			}
 
 			const changed =
 				(nextExpectedParticipantCount !== undefined &&
 					current.expectedParticipantCount !== nextExpectedParticipantCount) ||
 				(nextPresentationQrEnabled !== undefined &&
 					current.presentationQrEnabled !== nextPresentationQrEnabled);
+
 			if (changed) {
 				const updates = {
 					...(nextExpectedParticipantCount !== undefined
@@ -130,6 +143,7 @@ export async function updateMeetingSettings({
 						? { presentationQrEnabled: nextPresentationQrEnabled }
 						: {})
 				};
+
 				await tx.update(meeting).set(updates).where(eq(meeting.id, meetingId));
 			}
 

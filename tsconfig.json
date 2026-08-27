@@ -3,7 +3,8 @@
 	"compilerOptions": {
 		"rewriteRelativeImportExtensions": true,
 		"sourceMap": true,
-		"strict": true
+		"strict": true,
+		"lib": ["ES2023", "DOM", "DOM.Iterable"]
 	},
-	"include": ["src", "drizzle.config.ts"]
+	"include": ["src", "scripts", "drizzle.config.ts"]
 }

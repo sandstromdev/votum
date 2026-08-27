@@ -39,12 +39,17 @@
 	const latestClosedVote = $derived(
 		[...meeting.agenda]
 			.filter((agendaVote) => agendaVote.lifecycle === 'closed')
-			.sort((left, right) => (right.closedAt?.getTime() ?? 0) - (left.closedAt?.getTime() ?? 0))[0]
+			.toSorted(
+				(left, right) => (right.closedAt?.getTime() ?? 0) - (left.closedAt?.getTime() ?? 0)
+			)[0]
 	);
 	const latestOutcome = $derived(latestClosedVote?.outcome);
 	const latestOutcomeLabel = $derived.by(() => {
-		if (!latestOutcome) return null;
+		if (!latestOutcome) {
+			return null;
+		}
 		const outcome = latestOutcome.document.outcome;
+
 		return outcome.kind === 'selection'
 			? outcomeLabel({
 					kind: 'selection',
@@ -58,6 +63,7 @@
 	const hasUnresolvedIncompleteVote = $derived(
 		meeting.agenda.some((candidate) => {
 			const outcome = candidate.outcome?.document.outcome;
+
 			return (
 				candidate.lifecycle === 'closed' &&
 				outcome?.kind === 'selection' &&
@@ -90,18 +96,26 @@
 		errorMessage: string,
 		{ rethrow = false, id }: { rethrow?: boolean; id?: string } = {}
 	) {
-		if (busy) return;
+		if (busy) {
+			return;
+		}
 		busy = true;
-		if (id) loading.add(id);
+		if (id) {
+			loading.add(id);
+		}
 		try {
 			await action();
 			await refreshAll();
 		} catch (error) {
 			toast.error(errorMessage);
-			if (rethrow) throw error;
+			if (rethrow) {
+				throw error;
+			}
 		} finally {
 			busy = false;
-			if (id) loading.delete(id);
+			if (id) {
+				loading.delete(id);
+			}
 		}
 	}
 
@@ -119,7 +133,10 @@
 	}
 
 	function close() {
-		if (!activeVote) return;
+		if (!activeVote) {
+			return;
+		}
+
 		return run(
 			() =>
 				closeVote({
@@ -144,7 +161,9 @@
 	}
 
 	function requestActivateNext() {
-		if (busy) return;
+		if (busy) {
+			return;
+		}
 		if (hasUnrevealedPreviousResult) {
 			openConfirmDialog({
 				title: 'Deltagarna har inte sett resultatet',
@@ -152,13 +171,16 @@
 				confirmLabel: 'Aktivera ändå',
 				onConfirm: activateNext
 			});
+
 			return;
 		}
 		void activateNext();
 	}
 
 	function end() {
-		if (busy || hasUnresolvedIncompleteVote) return;
+		if (busy || hasUnresolvedIncompleteVote) {
+			return;
+		}
 		openConfirmDialog({
 			title: 'Avsluta mötet',
 			description: 'När mötet avslutas kan deltagarna inte längre rösta.',
@@ -173,7 +195,10 @@
 	}
 
 	function resolveIncomplete(resolutionType: 'accept' | 'vacancy') {
-		if (!latestClosedVote) return;
+		if (!latestClosedVote) {
+			return;
+		}
+
 		return run(
 			() =>
 				resolveIncompleteVote({
@@ -187,7 +212,10 @@
 	}
 
 	function rerunIncomplete() {
-		if (!latestClosedVote) return;
+		if (!latestClosedVote) {
+			return;
+		}
+
 		return run(
 			() => rerunVote({ meetingId: meeting.id, voteId: latestClosedVote.id }),
 			'En ny omröstning kunde inte skapas. Uppdatera sidan och försök igen.',
@@ -196,7 +224,9 @@
 	}
 
 	function invalidate(vote: OrganizerVote) {
-		if (busy) return;
+		if (busy) {
+			return;
+		}
 		openConfirmDialog({
 			title: 'Ogiltigförklara omröstning',
 			description: 'Ange varför omröstningen ska ogiltigförklaras.',

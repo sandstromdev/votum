@@ -182,6 +182,7 @@ it('shows the three Incomplete-result actions and blocks Meeting ending', async 
 	const screen = await render(MeetingLifecycleControls, {
 		meeting: { ...meeting, agenda: [incompleteVote] }
 	});
+
 	await settled();
 
 	await expect
@@ -226,6 +227,7 @@ it('shows the selected Incomplete resolution in the organiser preview', async ()
 			]
 		}
 	});
+
 	await expect.element(acceptedScreen.getByText('Ada + 2 platser ej tillsatta')).toBeVisible();
 
 	const vacancyScreen = await render(MeetingLifecycleControls, {
@@ -239,6 +241,7 @@ it('shows the selected Incomplete resolution in the organiser preview', async ()
 			]
 		}
 	});
+
 	await expect.element(vacancyScreen.getByText('Ada + 2 vakanta platser')).toBeVisible();
 });
 
@@ -261,6 +264,7 @@ it('confirms before activating next when the previous result is unrevealed', asy
 			agenda: [{ ...vote, revealed: false, revealedAt: null }, nextDraftVote]
 		}
 	});
+
 	await settled();
 
 	await screen.getByRole('button', { name: 'Aktivera nästa' }).click();
@@ -310,6 +314,7 @@ it('requires a trimmed reason before invalidating a Vote', async () => {
 
 	await screen.getByRole('button', { name: 'Ogiltigförklara' }).click();
 	const dialog = screen.getByRole('alertdialog');
+
 	await dialog.getByRole('textbox', { name: 'Anledning' }).fill('  Röstningen avbröts  ');
 	await dialog.getByRole('button', { name: 'Ogiltigförklara' }).click();
 

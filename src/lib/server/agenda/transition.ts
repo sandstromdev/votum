@@ -22,6 +22,7 @@ export type ReorderDecision =
 export function decideDraftReorder(rows: AgendaRow[], orderedVoteIds: string[]): ReorderDecision {
 	const draftRows = rows.filter((row) => row.lifecycle === 'draft');
 	const draftIds = draftRows.map(({ id }) => id);
+
 	if (
 		orderedVoteIds.length !== draftIds.length ||
 		new Set(orderedVoteIds).size !== orderedVoteIds.length ||

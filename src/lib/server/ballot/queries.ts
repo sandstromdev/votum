@@ -32,7 +32,10 @@ export async function readCurrentParticipantBallot(
 		recordTokenAnomaly,
 		onTokenAnomaly
 	});
-	if (!token) return null;
+
+	if (!token) {
+		return null;
+	}
 
 	const [currentBallot] = await tx
 		.select({ payload: ballot.payload })
@@ -45,10 +48,16 @@ export async function readCurrentParticipantBallot(
 			)
 		)
 		.limit(1);
-	if (!currentBallot) return null;
+
+	if (!currentBallot) {
+		return null;
+	}
 
 	const payload = storedBallotPayloadSchema.parse(currentBallot.payload);
-	if (payload.type === 'decision') return payload;
+
+	if (payload.type === 'decision') {
+		return payload;
+	}
 
 	if (payload.selectedOptionIds.length > 0) {
 		const optionRows = await tx
@@ -60,6 +69,7 @@ export async function readCurrentParticipantBallot(
 					inArray(selectionOption.id, payload.selectedOptionIds)
 				)
 			);
+
 		if (optionRows.length !== payload.selectedOptionIds.length) {
 			throw new Error('Selection Ballot references an option from another Vote.');
 		}

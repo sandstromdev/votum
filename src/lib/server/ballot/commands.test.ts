@@ -39,13 +39,19 @@ describe('Vote Ballots', () => {
 
 	function rememberActiveVote(publicLocator: string, voteId: string) {
 		const activeVoteKey = createActiveVoteKey(voteId);
+
 		activeVoteKeys.set(publicLocator, activeVoteKey);
+
 		return activeVoteKey;
 	}
 
 	function currentActiveVoteKey(publicLocator: string) {
 		const activeVoteKey = activeVoteKeys.get(publicLocator);
-		if (!activeVoteKey) throw new Error('Expected the test fixture to have an active Vote');
+
+		if (!activeVoteKey) {
+			throw new Error('Expected the test fixture to have an active Vote');
+		}
+
 		return activeVoteKey;
 	}
 
@@ -67,7 +73,7 @@ describe('Vote Ballots', () => {
 	}) {
 		return submitDecisionBallot({
 			...input,
-			activeVoteKey: input.activeVoteKey ?? (await currentActiveVoteKey(input.publicLocator)),
+			activeVoteKey: input.activeVoteKey ?? currentActiveVoteKey(input.publicLocator),
 			initialSubmissionKey:
 				input.initialSubmissionKey ?? (input.rawParticipantToken ? undefined : randomUUID())
 		});
@@ -84,7 +90,7 @@ describe('Vote Ballots', () => {
 	}) {
 		return submitSelectionBallot({
 			...input,
-			activeVoteKey: input.activeVoteKey ?? (await currentActiveVoteKey(input.publicLocator)),
+			activeVoteKey: input.activeVoteKey ?? currentActiveVoteKey(input.publicLocator),
 			initialSubmissionKey:
 				input.initialSubmissionKey ?? (input.rawParticipantToken ? undefined : randomUUID())
 		});
@@ -97,6 +103,7 @@ describe('Vote Ballots', () => {
 			title: 'Årsmöte',
 			expectedParticipantCount: 12
 		});
+
 		context.trackMeetings(meetingRecord.id);
 		const voteRecord = await addDraftVote({
 			organizerUserId,
@@ -107,7 +114,10 @@ describe('Vote Ballots', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!voteRecord) throw new Error('Expected the Decision Vote to be created');
+
+		if (!voteRecord) {
+			throw new Error('Expected the Decision Vote to be created');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: meetingRecord.id });
 		await activateVote({
@@ -135,6 +145,7 @@ describe('Vote Ballots', () => {
 			title: 'Årsmöte',
 			expectedParticipantCount: 12
 		});
+
 		context.trackMeetings(meetingRecord.id);
 		const voteRecord = await addDraftVote({
 			organizerUserId,
@@ -145,6 +156,7 @@ describe('Vote Ballots', () => {
 			vacancyEnabled,
 			options
 		});
+
 		if (!voteRecord || voteRecord.kind !== 'selection') {
 			throw new Error('Expected the Selection Vote to be created');
 		}
@@ -168,7 +180,9 @@ describe('Vote Ballots', () => {
 			choice: 'support'
 		});
 
-		if (!result?.createdToken) throw new Error('Expected a Participant token to be created');
+		if (!result?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 		expect(result).toMatchObject({ changed: true });
 		expect(result.createdToken).not.toHaveLength(0);
 
@@ -184,7 +198,10 @@ describe('Vote Ballots', () => {
 			publicLocator: meeting.publicLocator,
 			choice: 'support'
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		const beforeRows = await readBallotRows(meeting.id);
 		const beforeRevision = await context.getMeetingRevision(meeting.id);
@@ -231,7 +248,10 @@ describe('Vote Ballots', () => {
 	it('does not churn an unchanged single-winner Selection Ballot', async () => {
 		const { meeting, vote } = await createActiveSelectionVote();
 		const optionId = vote.selection.options[0]?.id;
-		if (!optionId) throw new Error('Expected a Selection option');
+
+		if (!optionId) {
+			throw new Error('Expected a Selection option');
+		}
 
 		const first = await selectionBallot({
 			publicLocator: meeting.publicLocator,
@@ -239,7 +259,10 @@ describe('Vote Ballots', () => {
 			vacancyCount: 0,
 			abstain: false
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		const beforeRows = await readBallotRows(meeting.id);
 		const beforeRevision = await context.getMeetingRevision(meeting.id);
@@ -263,7 +286,10 @@ describe('Vote Ballots', () => {
 	it('does not churn an unchanged multi-winner Selection Ballot', async () => {
 		const { meeting, vote } = await createActiveSelectionVote({ positionCount: 3 });
 		const selectedOptionIds = vote.selection.options.slice(0, 2).map(({ id }) => id);
-		if (selectedOptionIds.length !== 2) throw new Error('Expected two Selection options');
+
+		if (selectedOptionIds.length !== 2) {
+			throw new Error('Expected two Selection options');
+		}
 
 		const first = await selectionBallot({
 			publicLocator: meeting.publicLocator,
@@ -271,13 +297,16 @@ describe('Vote Ballots', () => {
 			vacancyCount: 1,
 			abstain: false
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		const beforeRows = await readBallotRows(meeting.id);
 		const beforeRevision = await context.getMeetingRevision(meeting.id);
 		const retry = await selectionBallot({
 			publicLocator: meeting.publicLocator,
-			selectedOptionIds: [...selectedOptionIds].reverse(),
+			selectedOptionIds: [...selectedOptionIds].toReversed(),
 			vacancyCount: 1,
 			abstain: false,
 			rawParticipantToken: first.createdToken
@@ -300,7 +329,10 @@ describe('Vote Ballots', () => {
 			choice: 'support',
 			initialSubmissionKey
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		const replay = await decisionBallot({
 			publicLocator: meeting.publicLocator,
@@ -321,6 +353,7 @@ describe('Vote Ballots', () => {
 			WHERE meeting_id = ${meeting.id}
 			GROUP BY initial_submission_key_hash, initial_submission_token_ciphertext
 		`;
+
 		expect(rows).toHaveLength(1);
 		expect(rows[0]).toMatchObject({ token_count: 1, ballot_count: 1 });
 		expect(rows[0]?.initial_submission_key_hash).not.toBe(initialSubmissionKey);
@@ -330,7 +363,10 @@ describe('Vote Ballots', () => {
 	it('replays an initial Selection Ballot with the same key and restores the token', async () => {
 		const { meeting, vote } = await createActiveSelectionVote({ positionCount: 2 });
 		const selectedOptionIds = vote.selection.options.slice(0, 2).map(({ id }) => id);
-		if (selectedOptionIds.length !== 2) throw new Error('Expected two Selection options');
+
+		if (selectedOptionIds.length !== 2) {
+			throw new Error('Expected two Selection options');
+		}
 		const initialSubmissionKey = randomUUID();
 		const first = await selectionBallot({
 			publicLocator: meeting.publicLocator,
@@ -339,11 +375,14 @@ describe('Vote Ballots', () => {
 			abstain: false,
 			initialSubmissionKey
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		const replay = await selectionBallot({
 			publicLocator: meeting.publicLocator,
-			selectedOptionIds: [...selectedOptionIds].reverse(),
+			selectedOptionIds: [...selectedOptionIds].toReversed(),
 			vacancyCount: 0,
 			abstain: false,
 			initialSubmissionKey
@@ -371,7 +410,10 @@ describe('Vote Ballots', () => {
 			publicLocator: meeting.publicLocator,
 			choice: 'support'
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		expect(
 			await submitDecisionBallot({
@@ -408,13 +450,17 @@ describe('Vote Ballots', () => {
 				(SELECT count(*)::int FROM participant_token WHERE meeting_id = ${meeting.id}) AS token_count,
 				(SELECT count(*)::int FROM ballot WHERE meeting_id = ${meeting.id}) AS ballot_count
 		`;
+
 		expect(rows[0]).toEqual({ token_count: 1, ballot_count: 1 });
 	});
 
 	it('serializes concurrent same-key Selection Ballots into one Participant and Ballot', async () => {
 		const { meeting, vote } = await createActiveSelectionVote({ positionCount: 2 });
 		const optionId = vote.selection.options[0]?.id;
-		if (!optionId) throw new Error('Expected a Selection option');
+
+		if (!optionId) {
+			throw new Error('Expected a Selection option');
+		}
 		const initialSubmissionKey = randomUUID();
 		const [first, second] = await Promise.all([
 			selectionBallot({
@@ -453,7 +499,10 @@ describe('Vote Ballots', () => {
 			activeVoteKey,
 			initialSubmissionKey
 		});
-		if (!first?.createdToken) throw new Error('Expected the initial Participant token');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected the initial Participant token');
+		}
 		const beforeCloseRows = await readBallotRows(meeting.id);
 
 		// The sequential await establishes the exact PostgreSQL commit boundary required by the
@@ -522,6 +571,7 @@ describe('Vote Ballots', () => {
 				(SELECT count(*)::int FROM ballot WHERE meeting_id = ${meeting.id}) AS ballot_count,
 				(SELECT (document->>'ballotCount')::int FROM outcome_snapshot WHERE meeting_id = ${meeting.id}) AS snapshot_ballot_count
 		`;
+
 		expect(state).toEqual({ participant_count: 0, ballot_count: 0, snapshot_ballot_count: 0 });
 	});
 
@@ -533,7 +583,10 @@ describe('Vote Ballots', () => {
 			choice: 'support',
 			initialSubmissionKey
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 		const revision = await context.getMeetingRevision(meeting.id);
 
 		await expect(
@@ -558,7 +611,10 @@ describe('Vote Ballots', () => {
 			choice: 'support',
 			initialSubmissionKey
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		await decisionBallot({
 			publicLocator: meeting.publicLocator,
@@ -591,6 +647,7 @@ describe('Vote Ballots', () => {
 			choice: 'oppose',
 			initialSubmissionKey: randomUUID()
 		});
+
 		if (!first?.createdToken || !second?.createdToken) {
 			throw new Error('Expected independent Participant tokens to be created');
 		}
@@ -604,7 +661,7 @@ describe('Vote Ballots', () => {
 	it('accepts many distinct Participants concurrently without losing current Ballots', async () => {
 		const { meeting } = await createActiveDecisionVote();
 		const submissions = await Promise.all(
-			Array.from({ length: 32 }, (_, index) =>
+			Array.from({ length: 32 }, async (_, index) =>
 				decisionBallot({
 					publicLocator: meeting.publicLocator,
 					choice: index % 2 === 0 ? 'support' : 'oppose',
@@ -620,6 +677,7 @@ describe('Vote Ballots', () => {
 				(SELECT count(*)::int FROM participant_token WHERE meeting_id = ${meeting.id}) AS participant_count,
 				(SELECT count(*)::int FROM ballot WHERE meeting_id = ${meeting.id}) AS ballot_count
 		`;
+
 		expect(state).toEqual({ participant_count: 32, ballot_count: 32 });
 	});
 
@@ -629,7 +687,10 @@ describe('Vote Ballots', () => {
 			publicLocator: meeting.publicLocator,
 			choice: 'support'
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		const replacement = await decisionBallot({
 			publicLocator: meeting.publicLocator,
@@ -658,13 +719,17 @@ describe('Vote Ballots', () => {
 	it('reads back only the matching Decision Ballot while the Vote is open', async () => {
 		const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
 		const withoutToken = await getParticipantPageProjection(meeting.publicLocator);
+
 		expect(withoutToken).toMatchObject({ state: 'active', currentBallot: null });
 
 		const submitted = await decisionBallot({
 			publicLocator: meeting.publicLocator,
 			choice: 'support'
 		});
-		if (!submitted?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!submitted?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		expect(
 			await getParticipantPageProjection(meeting.publicLocator, submitted.createdToken)
@@ -691,7 +756,10 @@ describe('Vote Ballots', () => {
 			vacancyCount: 1,
 			abstain: false
 		});
-		if (!submitted?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!submitted?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		expect(
 			await getParticipantPageProjection(meeting.publicLocator, submitted.createdToken)
@@ -707,16 +775,21 @@ describe('Vote Ballots', () => {
 			publicLocator: firstMeeting.meeting.publicLocator,
 			choice: 'support'
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		const secondMeeting = await createActiveDecisionVote();
 		const wrongMeetingRead = await getParticipantPageProjection(
 			secondMeeting.meeting.publicLocator,
 			first.createdToken
 		);
+
 		expect(wrongMeetingRead).toMatchObject({ state: 'active', currentBallot: null });
 
 		const unknownToken = 'unrecognized-token';
+
 		expect(
 			await getParticipantPageProjection(secondMeeting.meeting.publicLocator, unknownToken)
 		).toMatchObject({ state: 'active', currentBallot: null });
@@ -736,6 +809,7 @@ describe('Vote Ballots', () => {
 			WHERE meeting_id = ${secondMeeting.meeting.id}
 			ORDER BY name
 		`;
+
 		expect(diagnostics).toHaveLength(2);
 		expect(diagnostics.map(({ name }) => name)).toEqual([
 			'participant_token_unrecognized',
@@ -752,7 +826,7 @@ describe('Vote Ballots', () => {
 		const rawParticipantToken = 'concurrent-unrecognized-token';
 
 		const projections = await Promise.all(
-			Array.from({ length: 32 }, () =>
+			Array.from({ length: 32 }, async () =>
 				getParticipantPageProjection(meeting.publicLocator, rawParticipantToken)
 			)
 		);
@@ -766,6 +840,7 @@ describe('Vote Ballots', () => {
 			FROM participant_token_anomaly
 			WHERE meeting_id = ${meeting.id} AND vote_id = ${vote.id}
 		`;
+
 		expect(diagnostics).toEqual([
 			{
 				name: 'participant_token_unrecognized',
@@ -781,12 +856,15 @@ describe('Vote Ballots', () => {
 			publicLocator: source.meeting.publicLocator,
 			choice: 'support'
 		});
-		if (!sourceBallot?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!sourceBallot?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 		const sourceToken = sourceBallot.createdToken;
 
 		const target = await createActiveDecisionVote();
 		const projections = await Promise.all(
-			Array.from({ length: 32 }, () =>
+			Array.from({ length: 32 }, async () =>
 				getParticipantPageProjection(target.meeting.publicLocator, sourceToken)
 			)
 		);
@@ -800,6 +878,7 @@ describe('Vote Ballots', () => {
 			FROM participant_token_anomaly
 			WHERE meeting_id = ${target.meeting.id} AND vote_id = ${target.vote.id}
 		`;
+
 		expect(diagnostics).toEqual([
 			{
 				name: 'participant_token_wrong_meeting',
@@ -834,7 +913,10 @@ describe('Vote Ballots', () => {
 			publicLocator: firstMeeting.meeting.publicLocator,
 			choice: 'support'
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		const secondMeeting = await createActiveDecisionVote();
 		const second = await decisionBallot({
@@ -842,7 +924,10 @@ describe('Vote Ballots', () => {
 			choice: 'oppose',
 			rawParticipantToken: first.createdToken
 		});
-		if (!second?.createdToken) throw new Error('Expected a Meeting-scoped token to be created');
+
+		if (!second?.createdToken) {
+			throw new Error('Expected a Meeting-scoped token to be created');
+		}
 
 		expect(second.createdToken).not.toBe(first.createdToken);
 		expect(await getParticipantProjection(firstMeeting.meeting.publicLocator)).toMatchObject({
@@ -859,14 +944,19 @@ describe('Vote Ballots', () => {
 			publicLocator: meeting.publicLocator,
 			choice: 'support'
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		const second = await decisionBallot({
 			publicLocator: meeting.publicLocator,
 			choice: 'abstention'
 		});
 
-		if (!second?.createdToken) throw new Error('Expected a second Participant token to be created');
+		if (!second?.createdToken) {
+			throw new Error('Expected a second Participant token to be created');
+		}
 		expect(second.createdToken).not.toBe(first.createdToken);
 		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
 			participation: { current: 2, expected: 12 }
@@ -875,13 +965,16 @@ describe('Vote Ballots', () => {
 
 	it('rejects Ballot changes after Vote Close and Meeting end', async () => {
 		const closedVote = await createActiveDecisionVote();
-		const closedVoteKey = await currentActiveVoteKey(closedVote.meeting.publicLocator);
+		const closedVoteKey = currentActiveVoteKey(closedVote.meeting.publicLocator);
 		const first = await decisionBallot({
 			publicLocator: closedVote.meeting.publicLocator,
 			choice: 'support',
 			activeVoteKey: closedVoteKey
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		await closeVote({
 			organizerUserId: closedVote.organizerUserId,
@@ -902,7 +995,10 @@ describe('Vote Ballots', () => {
 			publicLocator: endedMeeting.meeting.publicLocator,
 			choice: 'support'
 		});
-		if (!second?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!second?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 		await closeVote({
 			organizerUserId: endedMeeting.organizerUserId,
 			meetingId: endedMeeting.meeting.id,
@@ -923,7 +1019,7 @@ describe('Vote Ballots', () => {
 
 	it('serializes a Ballot submission with a concurrent Vote Close', async () => {
 		const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
-		const activeVoteKey = await currentActiveVoteKey(meeting.publicLocator);
+		const activeVoteKey = currentActiveVoteKey(meeting.publicLocator);
 
 		const [submission, closed] = await Promise.all([
 			decisionBallot({ publicLocator: meeting.publicLocator, choice: 'support', activeVoteKey }),
@@ -931,12 +1027,12 @@ describe('Vote Ballots', () => {
 		]);
 
 		expect(closed).toMatchObject({ lifecycle: 'open' });
-		if (submission) expect(submission.changed).toBe(true);
+		expect(submission === null || submission.changed).toBe(true);
 	});
 
 	it('bounds two same-key initial submissions racing with Close at one PostgreSQL snapshot', async () => {
 		const { organizerUserId, meeting, vote } = await createActiveDecisionVote();
-		const activeVoteKey = await currentActiveVoteKey(meeting.publicLocator);
+		const activeVoteKey = currentActiveVoteKey(meeting.publicLocator);
 		const initialSubmissionKey = randomUUID();
 
 		const [first, second, closed] = await Promise.all([
@@ -966,24 +1062,24 @@ describe('Vote Ballots', () => {
 		expect(state?.participant_count).toBe(state?.ballot_count);
 		expect(state?.ballot_count).toBe(state?.snapshot_ballot_count);
 		expect([0, 1]).toContain(state?.snapshot_ballot_count);
-		if (state?.snapshot_ballot_count === 0) {
-			expect(first).toBeNull();
-			expect(second).toBeNull();
-		} else {
-			expect(state).toEqual({
-				participant_count: 1,
-				ballot_count: 1,
-				snapshot_ballot_count: 1
-			});
-			expect(first?.createdToken).toBeTruthy();
-			expect(second?.createdToken).toBe(first?.createdToken);
-		}
+		expect(
+			state?.snapshot_ballot_count === 0
+				? first === null && second === null
+				: state?.participant_count === 1 &&
+						state.ballot_count === 1 &&
+						state.snapshot_ballot_count === 1 &&
+						Boolean(first?.createdToken) &&
+						second?.createdToken === first?.createdToken
+		).toBe(true);
 	});
 
 	it('accepts a single-winner option, Abstention, and configured Vacancy', async () => {
 		const { meeting, vote } = await createActiveSelectionVote();
 		const optionId = vote.selection.options[0]?.id;
-		if (!optionId) throw new Error('Expected a Selection option');
+
+		if (!optionId) {
+			throw new Error('Expected a Selection option');
+		}
 
 		const first = await selectionBallot({
 			publicLocator: meeting.publicLocator,
@@ -991,7 +1087,10 @@ describe('Vote Ballots', () => {
 			vacancyCount: 0,
 			abstain: false
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 		expect(first).toMatchObject({ changed: true });
 
 		expect(
@@ -1030,7 +1129,9 @@ describe('Vote Ballots', () => {
 			abstain: false
 		});
 
-		if (!result?.createdToken) throw new Error('Expected a Participant token to be created');
+		if (!result?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 		expect(result).toMatchObject({ changed: true });
 	});
 
@@ -1038,7 +1139,10 @@ describe('Vote Ballots', () => {
 		const active = await createActiveSelectionVote({ positionCount: 2 });
 		const optionIds = active.vote.selection.options.slice(0, 2).map(({ id }) => id);
 		const firstOptionId = optionIds[0];
-		if (!firstOptionId) throw new Error('Expected a Selection option');
+
+		if (!firstOptionId) {
+			throw new Error('Expected a Selection option');
+		}
 
 		await expect(
 			selectionBallot({
@@ -1069,6 +1173,7 @@ describe('Vote Ballots', () => {
 			positionCount: 1,
 			options: ['Dora', 'Eli']
 		});
+
 		await expect(
 			selectionBallot({
 				publicLocator: other.meeting.publicLocator,
@@ -1082,6 +1187,7 @@ describe('Vote Ballots', () => {
 			positionCount: 1,
 			vacancyEnabled: false
 		});
+
 		await expect(
 			selectionBallot({
 				publicLocator: noVacancy.meeting.publicLocator,
@@ -1096,7 +1202,10 @@ describe('Vote Ballots', () => {
 		const { meeting, vote } = await createActiveSelectionVote({ positionCount: 2 });
 		const firstOptionId = vote.selection.options[0]?.id;
 		const secondOptionId = vote.selection.options[1]?.id;
-		if (!firstOptionId || !secondOptionId) throw new Error('Expected two Selection options');
+
+		if (!firstOptionId || !secondOptionId) {
+			throw new Error('Expected two Selection options');
+		}
 
 		const first = await selectionBallot({
 			publicLocator: meeting.publicLocator,
@@ -1104,7 +1213,10 @@ describe('Vote Ballots', () => {
 			vacancyCount: 1,
 			abstain: false
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		expect(
 			await selectionBallot({
@@ -1133,8 +1245,11 @@ describe('Vote Ballots', () => {
 	it('rejects Selection Ballot changes after Vote Close and serializes a concurrent Close', async () => {
 		const closedVote = await createActiveSelectionVote();
 		const closedOptionId = closedVote.vote.selection.options[0]?.id;
-		if (!closedOptionId) throw new Error('Expected a Selection option');
-		const closedVoteKey = await currentActiveVoteKey(closedVote.meeting.publicLocator);
+
+		if (!closedOptionId) {
+			throw new Error('Expected a Selection option');
+		}
+		const closedVoteKey = currentActiveVoteKey(closedVote.meeting.publicLocator);
 		const first = await selectionBallot({
 			publicLocator: closedVote.meeting.publicLocator,
 			selectedOptionIds: [closedOptionId],
@@ -1142,7 +1257,10 @@ describe('Vote Ballots', () => {
 			abstain: false,
 			activeVoteKey: closedVoteKey
 		});
-		if (!first?.createdToken) throw new Error('Expected a Participant token to be created');
+
+		if (!first?.createdToken) {
+			throw new Error('Expected a Participant token to be created');
+		}
 
 		await closeVote({
 			organizerUserId: closedVote.organizerUserId,
@@ -1168,8 +1286,11 @@ describe('Vote Ballots', () => {
 
 		const concurrent = await createActiveSelectionVote();
 		const concurrentOptionId = concurrent.vote.selection.options[0]?.id;
-		if (!concurrentOptionId) throw new Error('Expected a Selection option');
-		const concurrentVoteKey = await currentActiveVoteKey(concurrent.meeting.publicLocator);
+
+		if (!concurrentOptionId) {
+			throw new Error('Expected a Selection option');
+		}
+		const concurrentVoteKey = currentActiveVoteKey(concurrent.meeting.publicLocator);
 		const [submission, closed] = await Promise.all([
 			selectionBallot({
 				publicLocator: concurrent.meeting.publicLocator,
@@ -1186,7 +1307,7 @@ describe('Vote Ballots', () => {
 		]);
 
 		expect(closed).toMatchObject({ lifecycle: 'open' });
-		if (submission) expect(submission.changed).toBe(true);
+		expect(submission === null || submission.changed).toBe(true);
 		expect(await getParticipantProjection(concurrent.meeting.publicLocator)).toMatchObject({
 			state: 'closed'
 		});
@@ -1208,6 +1329,7 @@ describe('Vote Ballots', () => {
 			title: 'Årsmöte',
 			expectedParticipantCount: 12
 		});
+
 		context.trackMeetings(meeting.id);
 		const firstVote = await addDraftVote({
 			organizerUserId,
@@ -1227,7 +1349,10 @@ describe('Vote Ballots', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!firstVote || !secondVote) throw new Error('Expected two Decision Votes');
+
+		if (!firstVote || !secondVote) {
+			throw new Error('Expected two Decision Votes');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: meeting.id });
 		await activateVote({
@@ -1236,7 +1361,7 @@ describe('Vote Ballots', () => {
 			voteId: firstVote.id
 		});
 		rememberActiveVote(meeting.publicLocator, firstVote.id);
-		const staleActiveVoteKey = await currentActiveVoteKey(meeting.publicLocator);
+		const staleActiveVoteKey = currentActiveVoteKey(meeting.publicLocator);
 
 		await closeVote({ organizerUserId, meetingId: meeting.id, voteId: firstVote.id });
 		await activateVote({
@@ -1247,7 +1372,10 @@ describe('Vote Ballots', () => {
 		rememberActiveVote(meeting.publicLocator, secondVote.id);
 
 		const before = await getParticipantProjection(meeting.publicLocator);
-		if (before.state !== 'active') throw new Error('Expected the second Vote to be active');
+
+		if (before.state !== 'active') {
+			throw new Error('Expected the second Vote to be active');
+		}
 
 		await expect(
 			decisionBallot({
@@ -1258,6 +1386,7 @@ describe('Vote Ballots', () => {
 		).rejects.toSatisfy((e) => isBallotError(e, 'stale_active_vote'));
 
 		const after = await getParticipantProjection(meeting.publicLocator);
+
 		expect(after).toMatchObject({
 			state: 'active',
 			participation: { current: 0, expected: 12 },
@@ -1271,7 +1400,10 @@ describe('Vote Ballots', () => {
 			publicLocator: meeting.publicLocator,
 			choice: 'oppose'
 		});
-		if (!accepted?.createdToken) throw new Error('Expected a Participant token for the new Vote');
+
+		if (!accepted?.createdToken) {
+			throw new Error('Expected a Participant token for the new Vote');
+		}
 		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
 			participation: { current: 1, expected: 12 }
 		});
@@ -1289,6 +1421,7 @@ describe('Vote Ballots', () => {
 			title: 'Årsmöte',
 			expectedParticipantCount: 12
 		});
+
 		context.trackMeetings(meeting.id);
 		const firstVote = await addDraftVote({
 			organizerUserId,
@@ -1308,6 +1441,7 @@ describe('Vote Ballots', () => {
 			vacancyEnabled: true,
 			options: ['Cia', 'Dora']
 		});
+
 		if (
 			!firstVote ||
 			firstVote.kind !== 'selection' ||
@@ -1318,7 +1452,10 @@ describe('Vote Ballots', () => {
 		}
 		const firstOptionId = firstVote.selection.options[0]?.id;
 		const secondOptionId = secondVote.selection.options[0]?.id;
-		if (!firstOptionId || !secondOptionId) throw new Error('Expected a Selection option');
+
+		if (!firstOptionId || !secondOptionId) {
+			throw new Error('Expected a Selection option');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: meeting.id });
 		await activateVote({
@@ -1327,7 +1464,7 @@ describe('Vote Ballots', () => {
 			voteId: firstVote.id
 		});
 		rememberActiveVote(meeting.publicLocator, firstVote.id);
-		const staleActiveVoteKey = await currentActiveVoteKey(meeting.publicLocator);
+		const staleActiveVoteKey = currentActiveVoteKey(meeting.publicLocator);
 
 		await closeVote({ organizerUserId, meetingId: meeting.id, voteId: firstVote.id });
 		await activateVote({
@@ -1338,7 +1475,10 @@ describe('Vote Ballots', () => {
 		rememberActiveVote(meeting.publicLocator, secondVote.id);
 
 		const before = await getParticipantProjection(meeting.publicLocator);
-		if (before.state !== 'active') throw new Error('Expected the second Vote to be active');
+
+		if (before.state !== 'active') {
+			throw new Error('Expected the second Vote to be active');
+		}
 
 		await expect(
 			selectionBallot({
@@ -1351,6 +1491,7 @@ describe('Vote Ballots', () => {
 		).rejects.toSatisfy((e) => isBallotError(e, 'stale_active_vote'));
 
 		const after = await getParticipantProjection(meeting.publicLocator);
+
 		expect(after).toMatchObject({
 			state: 'active',
 			participation: { current: 0, expected: 12 },
@@ -1366,7 +1507,10 @@ describe('Vote Ballots', () => {
 			vacancyCount: 0,
 			abstain: false
 		});
-		if (!accepted?.createdToken) throw new Error('Expected a Participant token for the new Vote');
+
+		if (!accepted?.createdToken) {
+			throw new Error('Expected a Participant token for the new Vote');
+		}
 		expect(await getParticipantProjection(meeting.publicLocator)).toMatchObject({
 			participation: { current: 1, expected: 12 }
 		});

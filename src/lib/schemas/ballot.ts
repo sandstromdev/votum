@@ -1,4 +1,4 @@
-import z from 'zod';
+import { z } from 'zod';
 import { DECISION_BALLOT_CHOICES } from '#lib/vote/ballot.js';
 import { publicLocatorSchema } from './meeting.js';
 
@@ -40,7 +40,9 @@ export const submitSelectionBallotSchema = z
 		abstain: z.boolean().default(false)
 	})
 	.superRefine(({ action, abstain, selectedOptionIds, vacancyCount }, ctx) => {
-		if (action === 'withdraw') return;
+		if (action === 'withdraw') {
+			return;
+		}
 
 		if (new Set(selectedOptionIds).size !== selectedOptionIds.length) {
 			ctx.addIssue({

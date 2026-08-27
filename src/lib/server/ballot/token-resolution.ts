@@ -26,7 +26,9 @@ export async function resolveParticipantToken(
 ) {
 	// Store only the hash and operation, never the token. Page reads provide a callback so the
 	// diagnostic can be written after their repeatable-read transaction has committed.
-	if (!rawParticipantToken) return null;
+	if (!rawParticipantToken) {
+		return null;
+	}
 
 	const tokenHash = hashParticipantToken(rawParticipantToken);
 	const [existing] = await tx
@@ -35,8 +37,12 @@ export async function resolveParticipantToken(
 		.where(eq(participantToken.tokenHash, tokenHash))
 		.limit(1);
 
-	if (existing?.meetingId === meetingId) return existing;
-	if (!recordTokenAnomaly) return null;
+	if (existing?.meetingId === meetingId) {
+		return existing;
+	}
+	if (!recordTokenAnomaly) {
+		return null;
+	}
 
 	const anomaly = {
 		name: existing ? 'participant_token_wrong_meeting' : 'participant_token_unrecognized',
@@ -45,10 +51,12 @@ export async function resolveParticipantToken(
 		operation,
 		tokenState: existing ? 'wrong_meeting' : 'unrecognized'
 	} satisfies ParticipantTokenAnomalyInput;
+
 	if (onTokenAnomaly) {
 		onTokenAnomaly(anomaly);
 	} else {
 		await recordParticipantTokenAnomaly(tx, anomaly);
 	}
+
 	return null;
 }

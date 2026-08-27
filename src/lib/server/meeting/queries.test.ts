@@ -44,6 +44,7 @@ describe('Meeting queries', () => {
 			title: 'Möte för detaljsidan',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		expect(
@@ -73,6 +74,7 @@ describe('Meeting queries', () => {
 			title: 'Möte med agenda',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -88,6 +90,7 @@ describe('Meeting queries', () => {
 			organizerUserId,
 			publicLocator: created.publicLocator
 		});
+
 		expect(meeting?.agenda).toEqual([vote]);
 	});
 
@@ -98,6 +101,7 @@ describe('Meeting queries', () => {
 			title: 'Möte med deltagarantal',
 			expectedParticipantCount: 12
 		});
+
 		context.trackMeetings(created.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -108,7 +112,10 @@ describe('Meeting queries', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!vote) throw new Error('Expected the draft Vote to be created');
+
+		if (!vote) {
+			throw new Error('Expected the draft Vote to be created');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: created.id });
 		await activateVote({ organizerUserId, meetingId: created.id, voteId: vote.id });
@@ -121,7 +128,10 @@ describe('Meeting queries', () => {
 		).toMatchObject({ activeBallotCount: 0 });
 
 		const participant = await getParticipantPageProjection(created.publicLocator);
-		if (participant.state !== 'active') throw new Error('Expected the Vote to be active');
+
+		if (participant.state !== 'active') {
+			throw new Error('Expected the Vote to be active');
+		}
 		await submitDecisionBallot({
 			publicLocator: created.publicLocator,
 			activeVoteKey: participant.activeVoteKey,
@@ -144,6 +154,7 @@ describe('Meeting queries', () => {
 			title: 'Live-röstning',
 			expectedParticipantCount: 12
 		});
+
 		context.trackMeetings(created.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -154,17 +165,23 @@ describe('Meeting queries', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!vote) throw new Error('Expected the draft Vote to be created');
+
+		if (!vote) {
+			throw new Error('Expected the draft Vote to be created');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: created.id });
 		await activateVote({ organizerUserId, meetingId: created.id, voteId: vote.id });
 		const participant = await getParticipantPageProjection(created.publicLocator);
-		if (participant.state !== 'active') throw new Error('Expected the Vote to be active');
+
+		if (participant.state !== 'active') {
+			throw new Error('Expected the Vote to be active');
+		}
 
 		const controller = new AbortController();
 		const stream = liveMeetingSnapshots(
 			created.id,
-			() =>
+			async () =>
 				getOrganizerMeetingByLocator({
 					organizerUserId,
 					publicLocator: created.publicLocator
@@ -177,6 +194,7 @@ describe('Meeting queries', () => {
 		try {
 			expect((await stream.next()).value).toMatchObject({ activeBallotCount: 0 });
 			const nextSnapshot = stream.next();
+
 			await submitDecisionBallot({
 				publicLocator: created.publicLocator,
 				activeVoteKey: participant.activeVoteKey,
@@ -193,6 +211,7 @@ describe('Meeting queries', () => {
 					)
 				)
 			]);
+
 			expect(result.value).toMatchObject({ activeBallotCount: 1 });
 		} finally {
 			controller.abort();
@@ -207,6 +226,7 @@ describe('Meeting queries', () => {
 			title: 'Ögonblicksbild före ändring',
 			expectedParticipantCount: 12
 		});
+
 		context.trackMeetings(created.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -217,7 +237,10 @@ describe('Meeting queries', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!vote) throw new Error('Expected the draft Vote to be created');
+
+		if (!vote) {
+			throw new Error('Expected the draft Vote to be created');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: created.id });
 		await activateVote({ organizerUserId, meetingId: created.id, voteId: vote.id });
@@ -225,7 +248,10 @@ describe('Meeting queries', () => {
 			organizerUserId,
 			publicLocator: created.publicLocator
 		});
-		if (!before) throw new Error('Expected the Organizer projection to exist');
+
+		if (!before) {
+			throw new Error('Expected the Organizer projection to exist');
+		}
 
 		const participantTokenId = randomUUID();
 		const ballotId = randomUUID();
@@ -266,6 +292,7 @@ describe('Meeting queries', () => {
 					publicLocator: created.publicLocator
 				});
 				const list = await readOrganizerMeetings(tx, organizerUserId);
+
 				return { individual, listed: list.find(({ id }) => id === created.id) };
 			},
 			{ isolationLevel: 'repeatable read', accessMode: 'read only' }
@@ -289,6 +316,7 @@ describe('Meeting queries', () => {
 			title: 'Styrelsemöte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 
 		const projection = await getParticipantProjection(created.publicLocator);
@@ -319,6 +347,7 @@ describe('Meeting queries', () => {
 			title: 'Avslutat årsmöte',
 			expectedParticipantCount: 18
 		});
+
 		context.trackMeetings(created.id);
 
 		await sql`
@@ -353,6 +382,7 @@ describe('Meeting queries', () => {
 			title: 'Pausat möte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		await openMeeting({ organizerUserId, meetingId: created.id });
 
@@ -378,6 +408,7 @@ describe('Meeting queries', () => {
 			title: 'Möte med QR-kod',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		await openMeeting({ organizerUserId, meetingId: created.id });
 		await sql`
@@ -403,6 +434,7 @@ describe('Meeting queries', () => {
 			title: 'Öppet möte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -413,10 +445,14 @@ describe('Meeting queries', () => {
 			opposeLabel: 'Emot',
 			abstentionLabel: 'Avstår'
 		});
-		if (!vote) throw new Error('Expected the draft Vote to be created');
+
+		if (!vote) {
+			throw new Error('Expected the draft Vote to be created');
+		}
 		await openMeeting({ organizerUserId, meetingId: created.id });
 
 		const projection = await getParticipantProjection(created.publicLocator);
+
 		expect(projection).toMatchObject({ state: 'waiting', revision: 2 });
 		expect(projection).not.toHaveProperty('vote');
 		expect(JSON.stringify(projection)).not.toContain('Framtida fråga');
@@ -429,6 +465,7 @@ describe('Meeting queries', () => {
 			title: 'Valmöte',
 			expectedParticipantCount: null
 		});
+
 		context.trackMeetings(created.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -439,12 +476,16 @@ describe('Meeting queries', () => {
 			vacancyEnabled: true,
 			options: ['Ada', 'Bo']
 		});
-		if (!vote || vote.kind !== 'selection') throw new Error('Expected a Selection Vote');
+
+		if (!vote || vote.kind !== 'selection') {
+			throw new Error('Expected a Selection Vote');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: created.id });
 		await activateVote({ organizerUserId, meetingId: created.id, voteId: vote.id });
 
 		const projection = await getParticipantProjection(created.publicLocator);
+
 		expect(projection).toMatchObject({
 			state: 'active',
 			vote: {
@@ -466,6 +507,7 @@ describe('Meeting queries', () => {
 			title: 'Visningsmöte',
 			expectedParticipantCount: 20
 		});
+
 		context.trackMeetings(created.id);
 		const vote = await addDraftVote({
 			organizerUserId,
@@ -476,7 +518,10 @@ describe('Meeting queries', () => {
 			vacancyEnabled: true,
 			options: ['Ada', 'Bo']
 		});
-		if (!vote || vote.kind !== 'selection') throw new Error('Expected a Selection Vote');
+
+		if (!vote || vote.kind !== 'selection') {
+			throw new Error('Expected a Selection Vote');
+		}
 
 		await openMeeting({ organizerUserId, meetingId: created.id });
 		await activateVote({ organizerUserId, meetingId: created.id, voteId: vote.id });
@@ -500,6 +545,7 @@ describe('Meeting queries', () => {
 		});
 
 		const participantProjection = await getParticipantProjection(created.publicLocator);
+
 		expect(participantProjection).toHaveProperty('activeVoteKey');
 		expect(JSON.stringify(await getPresentationProjection(created.publicLocator))).not.toContain(
 			'activeVoteKey'

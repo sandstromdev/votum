@@ -36,7 +36,9 @@
 	const canRerun = $derived(meeting.lifecycle === 'open' && !activeVote);
 
 	async function rerun(voteId: string) {
-		if (busy || !canRerun) return;
+		if (busy || !canRerun) {
+			return;
+		}
 		busy = true;
 		loading.add(voteId);
 		try {
@@ -62,14 +64,24 @@
 	}
 
 	function resultCardClass(entry: OutcomeHistoryEntry) {
-		if (entry.outcome.state === 'winner') return 'border-primary/25 bg-primary/5';
-		if (entry.outcome.state === 'rejected') return 'border-destructive/25 bg-destructive/5';
+		if (entry.outcome.state === 'winner') {
+			return 'border-primary/25 bg-primary/5';
+		}
+		if (entry.outcome.state === 'rejected') {
+			return 'border-destructive/25 bg-destructive/5';
+		}
+
 		return 'border-border bg-muted/40';
 	}
 
 	function resultTextClass(entry: OutcomeHistoryEntry) {
-		if (entry.outcome.state === 'winner') return 'text-primary';
-		if (entry.outcome.state === 'rejected') return 'text-destructive';
+		if (entry.outcome.state === 'winner') {
+			return 'text-primary';
+		}
+		if (entry.outcome.state === 'rejected') {
+			return 'text-destructive';
+		}
+
 		return 'text-foreground';
 	}
 </script>

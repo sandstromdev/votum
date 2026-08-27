@@ -34,7 +34,7 @@ export class BallotError<TCode extends BallotErrorCode = BallotErrorCode> extend
 	}
 }
 
-export function isBallotError(error: unknown): error is BallotError<BallotErrorCode>;
+export function isBallotError(error: unknown): error is BallotError;
 export function isBallotError<TCode extends BallotErrorCode>(
 	error: unknown,
 	code: TCode

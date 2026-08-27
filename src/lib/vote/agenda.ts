@@ -55,5 +55,6 @@ export function compareVotesByOpenedAt(
 ) {
 	const leftTime = left.openedAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
 	const rightTime = right.openedAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
+
 	return leftTime - rightTime || left.position - right.position;
 }

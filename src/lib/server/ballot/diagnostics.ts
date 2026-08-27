@@ -46,7 +46,7 @@ export async function recordParticipantTokenAnomalyBestEffort(input: Participant
 		// reproduced SQLSTATE 40001 when concurrent diagnostic inserts raced there; a savepoint
 		// cannot make that serialization failure safe to continue. An independent short transaction
 		// keeps the projection's snapshot and transaction usable if this non-essential write fails.
-		await db.transaction((tx) => insertParticipantTokenAnomaly(tx, input));
+		await db.transaction(async (tx) => insertParticipantTokenAnomaly(tx, input));
 	} catch {
 		// Participant-token diagnostics are best effort and must never fail the page projection.
 	}

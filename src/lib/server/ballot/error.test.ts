@@ -19,6 +19,7 @@ describe('Ballot errors', () => {
 
 		for (const { code, message } of expectedMessages) {
 			const error = new BallotError(code);
+
 			expect(error.message).toBe(message);
 			expect(error.message).toBe(BALLOT_ERRORS[code].message);
 		}

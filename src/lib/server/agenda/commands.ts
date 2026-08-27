@@ -19,6 +19,7 @@ import { decideDraftReorder, nextAgendaPosition } from './transition.js';
 
 export async function addDraftVote(input: OrganizerCommand & DraftVoteInput) {
 	const configuration = draftInputToVoteConfiguration(input);
+
 	return mutateEditableMeeting({
 		organizerUserId: input.organizerUserId,
 		meetingId: input.meetingId,
@@ -41,6 +42,7 @@ export async function addDraftVote(input: OrganizerCommand & DraftVoteInput) {
 				.returning();
 
 			await insertVoteConfiguration(tx, created.id, configuration);
+
 			return { value: (await readAgenda(tx, [created]))[0], changed: true };
 		}
 	});
@@ -48,6 +50,7 @@ export async function addDraftVote(input: OrganizerCommand & DraftVoteInput) {
 
 export async function editDraftVote(input: OrganizerCommand & UpdateDraftVoteInput) {
 	const configuration = draftInputToVoteConfiguration(input);
+
 	return mutateEditableMeeting({
 		organizerUserId: input.organizerUserId,
 		meetingId: input.meetingId,
@@ -64,7 +67,10 @@ export async function editDraftVote(input: OrganizerCommand & UpdateDraftVoteInp
 					)
 				)
 				.limit(1);
-			if (!existing) return { value: null, changed: false };
+
+			if (!existing) {
+				return { value: null, changed: false };
+			}
 
 			await tx.delete(decisionVoteConfig).where(eq(decisionVoteConfig.voteId, existing.id));
 			await tx.delete(selectionVoteConfig).where(eq(selectionVoteConfig.voteId, existing.id));
@@ -76,6 +82,7 @@ export async function editDraftVote(input: OrganizerCommand & UpdateDraftVoteInp
 				.returning();
 
 			await insertVoteConfiguration(tx, updated.id, configuration);
+
 			return { value: (await readAgenda(tx, [updated]))[0], changed: true };
 		}
 	});
@@ -121,8 +128,13 @@ export async function reorderDraftVotes({
 				.where(eq(vote.meetingId, meetingId))
 				.orderBy(asc(vote.position));
 			const decision = decideDraftReorder(rows, orderedVoteIds);
-			if (decision.kind === 'invalid') return { value: false, changed: false };
-			if (decision.kind === 'unchanged') return { value: true, changed: false };
+
+			if (decision.kind === 'invalid') {
+				return { value: false, changed: false };
+			}
+			if (decision.kind === 'unchanged') {
+				return { value: true, changed: false };
+			}
 
 			// Use temporary positions so the unique index does not collide while rows swap slots.
 			for (const [index, row] of decision.draftRows.entries()) {

@@ -25,8 +25,10 @@ export async function run(config: Config) {
 	if (config.dryRun) {
 		const finishedAt = new Date();
 		const report = createReport(config, reportFile, [], 0, startedAt, finishedAt, 'dry-run', null);
+
 		await writeReport(report);
 		console.info(JSON.stringify({ status: 'dry-run', reportFile, plan }, null, 2));
+
 		return;
 	}
 
@@ -40,6 +42,7 @@ export async function run(config: Config) {
 
 	try {
 		const launchedBrowser = await chromium.launch({ headless: config.headless });
+
 		browser = launchedBrowser;
 		presentationContext = await openPresentation(launchedBrowser, config, samples);
 		const rampStartedAt = Date.now();
@@ -48,13 +51,17 @@ export async function run(config: Config) {
 		for (let index = 0; index < config.users; index += 1) {
 			const target =
 				rampStartedAt + Math.round((config.rampMs * index) / Math.max(1, config.users - 1));
+
 			await sleepUntil(target);
 			participantPromises.push(createParticipant(launchedBrowser, config, samples, index));
 		}
 
 		const createdParticipants = await Promise.all(participantPromises);
+
 		for (const participant of createdParticipants) {
-			if (participant) participants.push(participant);
+			if (participant) {
+				participants.push(participant);
+			}
 		}
 		if (participants.length === 0) {
 			throw new Error('No participant browser reached an active Vote.');
@@ -72,7 +79,7 @@ export async function run(config: Config) {
 	} finally {
 		await presentationContext?.close().catch(() => undefined);
 		await Promise.all(
-			participants.map((participant) => participant.context.close().catch(() => undefined))
+			participants.map(async (participant) => participant.context.close().catch(() => undefined))
 		);
 		await browser?.close().catch(() => undefined);
 
@@ -89,6 +96,7 @@ export async function run(config: Config) {
 			status,
 			fatalError
 		);
+
 		try {
 			await writeReport(report);
 		} catch (error) {
@@ -97,9 +105,12 @@ export async function run(config: Config) {
 		printSummary(report);
 	}
 
-	if (reportError)
+	if (reportError) {
 		throw new Error(`Could not write report ${reportFile}: ${errorMessage(reportError)}`);
-	if (fatalError) throw fatalError;
+	}
+	if (fatalError) {
+		throw fatalError;
+	}
 	if (samples.some((sample) => sample.outcome === 'failure')) {
 		throw new Error('Load test completed with failed operations.');
 	}

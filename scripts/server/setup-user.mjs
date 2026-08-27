@@ -26,6 +26,7 @@ const client = postgres(config.databaseUrl);
 try {
 	const result = await client.begin(async (tx) => {
 		const userId = randomUUID();
+
 		await tx`
 			insert into "user" ("id", "name", "email", "email_verified", "role")
 			values (${userId}, ${config.name}, ${config.email}, true, 'user')

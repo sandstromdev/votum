@@ -9,6 +9,7 @@
 	import { refreshAll } from '$app/navigation';
 	import { IconArrowLeft } from '@tabler/icons-svelte';
 	import { onDestroy } from 'svelte';
+	import { LIFECYCLE_LABELS } from '#lib/vote/meeting.js';
 
 	let { data } = $props();
 
@@ -27,12 +28,16 @@
 	const liveUnavailable = $derived(Boolean(liveMeeting?.done || liveMeeting?.error));
 
 	function stopPolling() {
-		if (pollTimer) clearTimeout(pollTimer);
+		if (pollTimer) {
+			clearTimeout(pollTimer);
+		}
 		pollTimer = undefined;
 	}
 
 	function schedulePolling() {
-		if (pollTimer || liveMeeting?.connected || !liveUnavailable) return;
+		if (pollTimer || liveMeeting?.connected || !liveUnavailable) {
+			return;
+		}
 
 		pollTimer = setTimeout(async () => {
 			pollTimer = undefined;
@@ -47,19 +52,16 @@
 	}
 
 	$effect(() => {
-		if (liveMeeting?.connected) stopPolling();
-		else if (liveUnavailable) schedulePolling();
+		if (liveMeeting?.connected) {
+			stopPolling();
+		} else if (liveUnavailable) {
+			schedulePolling();
+		}
 	});
 
 	onDestroy(stopPolling);
 
-	const lifecycleLabel = $derived(
-		meeting.lifecycle === 'draft'
-			? 'Inte öppnat'
-			: meeting.lifecycle === 'open'
-				? 'Öppet'
-				: 'Avslutat'
-	);
+	const lifecycleLabel = $derived(LIFECYCLE_LABELS[meeting.lifecycle]);
 
 	const participantLink = $derived(new URL(meeting.participantPath, ORIGIN).toString());
 </script>

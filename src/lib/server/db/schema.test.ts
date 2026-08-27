@@ -25,12 +25,14 @@ type Db = Pick<typeof db, 'insert' | 'update' | 'delete' | 'execute'>;
 
 async function insertOrganizer(tx: Db) {
 	const id = randomUUID();
+
 	await tx.insert(user).values({
 		id,
 		name: 'Organizer',
 		email: `${id}@example.test`,
 		emailVerified: false
 	});
+
 	return id;
 }
 
@@ -49,13 +51,17 @@ async function insertMeeting(
 ) {
 	const id = overrides.id ?? uuidv7();
 	const lifecycle = overrides.lifecycle ?? 'draft';
-	const openedAt =
-		overrides.openedAt === undefined
-			? lifecycle === 'draft'
-				? null
-				: new Date()
-			: overrides.openedAt;
+	let openedAt: Date | null;
+
+	if (overrides.openedAt !== undefined) {
+		openedAt = overrides.openedAt;
+	} else if (lifecycle === 'draft') {
+		openedAt = null;
+	} else {
+		openedAt = new Date();
+	}
 	const closedAt = overrides.closedAt === undefined ? null : overrides.closedAt;
+
 	await tx.insert(meeting).values({
 		id,
 		organizerUserId,
@@ -67,6 +73,7 @@ async function insertMeeting(
 		revision: overrides.revision,
 		expectedParticipantCount: overrides.expectedParticipantCount
 	});
+
 	return id;
 }
 
@@ -86,6 +93,7 @@ async function insertVote(
 	} = {}
 ) {
 	const id = overrides.id ?? uuidv7();
+
 	await tx.insert(vote).values({
 		id,
 		meetingId,
@@ -98,10 +106,11 @@ async function insertVote(
 		rerunOfVoteId: overrides.rerunOfVoteId,
 		revealed: overrides.revealed
 	});
+
 	return id;
 }
 
-function expectSqlState(work: Promise<unknown>, code: string) {
+async function expectSqlState(work: Promise<unknown>, code: string) {
 	return expect(work).rejects.toSatisfy((error) => sqlState(error) === code);
 }
 
@@ -123,7 +132,8 @@ describe('whole Meeting voting PostgreSQL model', () => {
 						'outcome_snapshot'
 					)
 			`);
-			expect([...tables].map((row) => row.table_name).sort()).toEqual([
+
+			expect([...tables].map((row) => row.table_name).toSorted()).toEqual([
 				'account',
 				'ballot',
 				'decision_vote_config',
@@ -196,6 +206,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 			await expectSqlState(
 				db.transaction(async (tx) => {
 					const organizerUserId = await insertOrganizer(tx);
+
 					await insertMeeting(tx, organizerUserId, { publicLocator: 'same-link' });
 					await insertMeeting(tx, organizerUserId, { publicLocator: 'same-link' });
 				}),
@@ -216,6 +227,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 			await expectSqlState(
 				db.transaction(async (tx) => {
 					const organizerUserId = await insertOrganizer(tx);
+
 					await insertMeeting(tx, organizerUserId, { revision: -1 });
 				}),
 				CHECK_VIOLATION
@@ -224,6 +236,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 			await expectSqlState(
 				db.transaction(async (tx) => {
 					const organizerUserId = await insertOrganizer(tx);
+
 					await insertMeeting(tx, organizerUserId, { expectedParticipantCount: 0 });
 				}),
 				CHECK_VIOLATION
@@ -237,6 +250,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 				db.transaction(async (tx) => {
 					const organizerUserId = await insertOrganizer(tx);
 					const meetingId = await insertMeeting(tx, organizerUserId);
+
 					await insertVote(tx, meetingId, { position: 0 });
 					await insertVote(tx, meetingId, { position: 0 });
 				}),
@@ -250,6 +264,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 					const organizerUserId = await insertOrganizer(tx);
 					const meetingId = await insertMeeting(tx, organizerUserId);
 					const openedAt = new Date();
+
 					await insertVote(tx, meetingId, { position: 0, lifecycle: 'open', openedAt });
 					await insertVote(tx, meetingId, { position: 1, lifecycle: 'open', openedAt });
 				}),
@@ -262,6 +277,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 				db.transaction(async (tx) => {
 					const organizerUserId = await insertOrganizer(tx);
 					const meetingId = await insertMeeting(tx, organizerUserId);
+
 					await insertVote(tx, meetingId, {
 						lifecycle: 'open',
 						openedAt: new Date(),
@@ -278,6 +294,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 					const organizerUserId = await insertOrganizer(tx);
 					const meetingId = await insertMeeting(tx, organizerUserId);
 					const voteId = uuidv7();
+
 					await insertVote(tx, meetingId, { id: voteId, rerunOfVoteId: voteId });
 				}),
 				CHECK_VIOLATION
@@ -291,6 +308,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 					const sourceMeetingId = await insertMeeting(tx, organizerUserId);
 					const targetMeetingId = await insertMeeting(tx, organizerUserId);
 					const sourceVoteId = await insertVote(tx, sourceMeetingId);
+
 					await insertVote(tx, targetMeetingId, { rerunOfVoteId: sourceVoteId });
 				}),
 				FOREIGN_KEY_VIOLATION
@@ -307,6 +325,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 						lifecycle: 'open',
 						openedAt: new Date('2026-08-20T10:00:00.000Z')
 					});
+
 					await tx.insert(decisionVoteConfig).values({
 						voteId,
 						supportLabel: 'Ja',
@@ -318,6 +337,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 						.select()
 						.from(decisionVoteConfig)
 						.where(eq(decisionVoteConfig.voteId, voteId));
+
 					expect(config).toMatchObject({
 						supportLabel: 'Ja',
 						opposeLabel: 'Nej',
@@ -329,6 +349,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 						.select({ lifecycle: vote.lifecycle, title: vote.title })
 						.from(vote)
 						.where(eq(vote.id, voteId));
+
 					expect(voteRow).toEqual({ lifecycle: 'open', title: 'Proposition' });
 
 					await tx.delete(decisionVoteConfig).where(eq(decisionVoteConfig.voteId, voteId));
@@ -344,6 +365,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 						const organizerUserId = await insertOrganizer(tx);
 						const meetingId = await insertMeeting(tx, organizerUserId);
 						const voteId = await insertVote(tx, meetingId, { kind: 'decision' });
+
 						await tx.insert(decisionVoteConfig).values({
 							voteId,
 							supportLabel: 'Ja',
@@ -369,6 +391,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 						const organizerUserId = await insertOrganizer(tx);
 						const meetingId = await insertMeeting(tx, organizerUserId);
 						const voteId = await insertVote(tx, meetingId, { kind: 'selection' });
+
 						await tx.insert(selectionVoteConfig).values({
 							voteId,
 							mode: 'single',
@@ -433,6 +456,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 					const meetingId = await insertMeeting(tx, organizerUserId);
 					const voteId = await insertVote(tx, meetingId);
 					const tokenId = uuidv7();
+
 					await tx.insert(participantToken).values({
 						id: tokenId,
 						meetingId,
@@ -465,6 +489,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 					const otherMeetingId = await insertMeeting(tx, organizerUserId);
 					const voteId = await insertVote(tx, meetingId);
 					const tokenId = uuidv7();
+
 					await tx.insert(participantToken).values({
 						id: tokenId,
 						meetingId: otherMeetingId,
@@ -494,6 +519,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 						openedAt: new Date('2026-01-01T10:00:00Z'),
 						closedAt: new Date('2026-01-01T10:05:00Z')
 					});
+
 					await tx.insert(outcomeSnapshot).values({
 						voteId,
 						meetingId,
@@ -519,6 +545,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 						openedAt: new Date('2026-01-01T10:00:00Z'),
 						closedAt: new Date('2026-01-01T10:05:00Z')
 					});
+
 					await tx.insert(outcomeSnapshot).values({
 						voteId,
 						meetingId,
@@ -542,6 +569,7 @@ describe('whole Meeting voting PostgreSQL model', () => {
 						openedAt: new Date('2026-01-01T10:00:00Z'),
 						closedAt: new Date('2026-01-01T10:05:00Z')
 					});
+
 					await tx.insert(outcomeSnapshot).values({
 						voteId,
 						meetingId,

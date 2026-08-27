@@ -40,12 +40,16 @@ export function useRamp({
 	let rampStartedAt: number | undefined;
 
 	function rampUp() {
-		if (!active) return;
+		if (!active) {
+			return;
+		}
 		ramping = true;
 		const timeSinceStart = Date.now() - (rampStartedAt ?? 0);
 		const freq = rampUpTime === 0 ? 0 : Math.min(timeSinceStart, rampUpTime) / rampUpTime;
+
 		if (!canRamp()) {
 			reset();
+
 			return;
 		}
 		increment();

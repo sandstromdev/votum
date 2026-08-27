@@ -31,6 +31,7 @@ async function advanceMeetingAndRead(tx: MeetingTransaction, meetingId: string) 
 		.set({ revision: sql`${meeting.revision} + 1` })
 		.where(eq(meeting.id, meetingId))
 		.returning(organizerMeetingColumns);
+
 	return {
 		value: mapOrganizerMeeting(
 			updated,
@@ -53,6 +54,7 @@ async function hasActiveVote(tx: MeetingTransaction, meetingId: string) {
 		.from(vote)
 		.where(and(eq(vote.meetingId, meetingId), eq(vote.lifecycle, 'open')))
 		.limit(1);
+
 	return !!activeVote;
 }
 
@@ -77,7 +79,9 @@ export async function openMeeting({
 			.for('update')
 			.limit(1);
 
-		if (!draft) return null;
+		if (!draft) {
+			return null;
+		}
 
 		const [opened] = await tx
 			.update(meeting)
@@ -88,6 +92,7 @@ export async function openMeeting({
 			})
 			.where(eq(meeting.id, meetingId))
 			.returning(organizerMeetingColumns);
+
 		return {
 			value: mapOrganizerMeeting(
 				opened,
@@ -98,8 +103,10 @@ export async function openMeeting({
 		} satisfies CommittedMeetingResult<ReturnType<typeof mapOrganizerMeeting>>;
 	});
 
-	if (committed)
+	if (committed) {
 		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
+	}
+
 	return committed?.value ?? null;
 }
 
@@ -125,7 +132,9 @@ export async function activateVote({
 			.for('update')
 			.limit(1);
 
-		if (!ownedMeeting || (await hasActiveVote(tx, meetingId))) return null;
+		if (!ownedMeeting || (await hasActiveVote(tx, meetingId))) {
+			return null;
+		}
 
 		const [draftVote] = await tx
 			.select()
@@ -134,14 +143,18 @@ export async function activateVote({
 			.for('update')
 			.limit(1);
 
-		if (!draftVote) return null;
+		if (!draftVote) {
+			return null;
+		}
 		await readAgenda(tx, [draftVote]);
 
 		return activateLockedVote(tx, meetingId, draftVote.id);
 	});
 
-	if (committed)
+	if (committed) {
 		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
+	}
+
 	return committed?.value ?? null;
 }
 
@@ -166,7 +179,9 @@ export async function activateNextVote({
 			.for('update')
 			.limit(1);
 
-		if (!ownedMeeting || (await hasActiveVote(tx, meetingId))) return null;
+		if (!ownedMeeting || (await hasActiveVote(tx, meetingId))) {
+			return null;
+		}
 
 		const [nextVote] = await tx
 			.select()
@@ -176,14 +191,18 @@ export async function activateNextVote({
 			.for('update')
 			.limit(1);
 
-		if (!nextVote) return null;
+		if (!nextVote) {
+			return null;
+		}
 		await readAgenda(tx, [nextVote]);
 
 		return activateLockedVote(tx, meetingId, nextVote.id);
 	});
 
-	if (committed)
+	if (committed) {
 		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
+	}
+
 	return committed?.value ?? null;
 }
 
@@ -204,7 +223,9 @@ export async function closeVote({ organizerUserId, meetingId, voteId }: VoteLife
 			.for('update')
 			.limit(1);
 
-		if (!ownedMeeting) return null;
+		if (!ownedMeeting) {
+			return null;
+		}
 
 		const [activeVote] = await tx
 			.select()
@@ -213,11 +234,16 @@ export async function closeVote({ organizerUserId, meetingId, voteId }: VoteLife
 			.for('update')
 			.limit(1);
 
-		if (!activeVote) return null;
+		if (!activeVote) {
+			return null;
+		}
 		const [organizerVote] = await readAgenda(tx, [activeVote]);
-		if (!organizerVote) throw new Error('Active Vote is missing its configuration.');
+
+		if (!organizerVote) {
+			throw new Error('Active Vote is missing its configuration.');
+		}
 		const closedAt = new Date();
-		const document = await buildOutcomeSnapshotDocument({
+		const document = buildOutcomeSnapshotDocument({
 			vote: organizerVote,
 			ballots: await readVoteBallots(tx, activeVote.id),
 			expectedParticipantCount: ownedMeeting.expectedParticipantCount,
@@ -232,11 +258,14 @@ export async function closeVote({ organizerUserId, meetingId, voteId }: VoteLife
 		});
 
 		await tx.update(vote).set({ lifecycle: 'closed', closedAt }).where(eq(vote.id, activeVote.id));
+
 		return advanceMeetingAndRead(tx, meetingId);
 	});
 
-	if (committed)
+	if (committed) {
 		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
+	}
+
 	return committed?.value ?? null;
 }
 
@@ -256,17 +285,25 @@ export async function revealVote({ organizerUserId, meetingId, voteId }: VoteLif
 			.for('update')
 			.limit(1);
 
-		if (!ownedMeeting) return null;
+		if (!ownedMeeting) {
+			return null;
+		}
 		const [closedVote] = await tx
 			.select({ id: vote.id, revealed: vote.revealed })
 			.from(vote)
 			.where(and(eq(vote.id, voteId), eq(vote.meetingId, meetingId), eq(vote.lifecycle, 'closed')))
 			.for('update')
 			.limit(1);
-		if (!closedVote || closedVote.revealed) return null;
+
+		if (!closedVote || closedVote.revealed) {
+			return null;
+		}
 
 		const snapshot = (await readOutcomeSnapshots(tx, [voteId])).get(voteId);
-		if (!snapshot) return null;
+
+		if (!snapshot) {
+			return null;
+		}
 		if (
 			snapshot.document.outcome.kind === 'selection' &&
 			snapshot.document.outcome.state === 'incomplete'
@@ -276,18 +313,24 @@ export async function revealVote({ organizerUserId, meetingId, voteId }: VoteLif
 				.from(outcomeResolution)
 				.where(eq(outcomeResolution.voteId, voteId))
 				.limit(1);
-			if (!resolution) return null;
+
+			if (!resolution) {
+				return null;
+			}
 		}
 
 		await tx
 			.update(vote)
 			.set({ revealed: true, revealedAt: new Date() })
 			.where(eq(vote.id, voteId));
+
 		return advanceMeetingAndRead(tx, meetingId);
 	});
 
-	if (committed)
+	if (committed) {
 		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
+	}
+
 	return committed?.value ?? null;
 }
 
@@ -310,7 +353,10 @@ export async function setPublicResultBreakdown({
 			)
 			.for('update')
 			.limit(1);
-		if (!ownedMeeting) return null;
+
+		if (!ownedMeeting) {
+			return null;
+		}
 
 		const [closedVote] = await tx
 			.select({
@@ -322,7 +368,10 @@ export async function setPublicResultBreakdown({
 			.where(and(eq(vote.id, voteId), eq(vote.meetingId, meetingId), eq(vote.lifecycle, 'closed')))
 			.for('update')
 			.limit(1);
-		if (!closedVote || !closedVote.revealed) return null;
+
+		if (!closedVote || !closedVote.revealed) {
+			return null;
+		}
 		if (closedVote.publicResultBreakdownEnabled === enabled) {
 			return {
 				value: mapOrganizerMeeting(
@@ -335,12 +384,14 @@ export async function setPublicResultBreakdown({
 		}
 
 		await tx.update(vote).set({ publicResultBreakdownEnabled: enabled }).where(eq(vote.id, voteId));
+
 		return advanceMeetingAndRead(tx, meetingId);
 	});
 
 	if (committed && committed.revision !== null) {
 		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
 	}
+
 	return committed?.value ?? null;
 }
 
@@ -369,14 +420,19 @@ export async function endMeeting({
 			.for('update')
 			.limit(1);
 
-		if (!ownedMeeting) return null;
+		if (!ownedMeeting) {
+			return null;
+		}
 
 		const [activeVote] = await tx
 			.select({ id: vote.id })
 			.from(vote)
 			.where(and(eq(vote.meetingId, meetingId), eq(vote.lifecycle, 'open')))
 			.limit(1);
-		if (activeVote) return null;
+
+		if (activeVote) {
+			return null;
+		}
 
 		const agenda = await readAgendaForMeeting(tx, meetingId);
 		const hasUnresolvedIncompleteVote = agenda.some(
@@ -387,13 +443,17 @@ export async function endMeeting({
 				!candidate.resolution &&
 				!agenda.some((child) => child.rerunOfVoteId === candidate.id)
 		);
-		if (hasUnresolvedIncompleteVote) return null;
+
+		if (hasUnresolvedIncompleteVote) {
+			return null;
+		}
 
 		const [ended] = await tx
 			.update(meeting)
 			.set({ lifecycle: 'closed', closedAt: new Date(), revision: sql`${meeting.revision} + 1` })
 			.where(eq(meeting.id, meetingId))
 			.returning(organizerMeetingColumns);
+
 		return {
 			value: mapOrganizerMeeting(
 				ended,
@@ -404,7 +464,9 @@ export async function endMeeting({
 		} satisfies CommittedMeetingResult<ReturnType<typeof mapOrganizerMeeting>>;
 	});
 
-	if (committed)
+	if (committed) {
 		meetingPubSub.publish(meetingId, { kind: 'revision', revision: committed.revision });
+	}
+
 	return committed?.value ?? null;
 }

@@ -13,10 +13,13 @@ import { BALLOT_ERRORS } from '#lib/server/ballot/error.js';
 import { getParticipantToken, setParticipantToken } from '#lib/server/participant-token.js';
 import { createTimingContext } from '#lib/server/timing.js';
 import { participantMeeting } from './meeting.remote.js';
-import z from 'zod';
+import { z } from 'zod';
 
 function invalidBallotFormError(caught: unknown): never {
-	if (isBallotError(caught)) invalid(BALLOT_ERRORS[caught.code].message);
+	if (isBallotError(caught)) {
+		invalid(BALLOT_ERRORS[caught.code].message);
+	}
+
 	throw caught;
 }
 
@@ -41,13 +44,16 @@ export const submitDecisionBallotForm = form(submitDecisionBallotSchema, async (
 			const result = await submitDecisionBallotRecord({
 				publicLocator: input.publicLocator,
 				activeVoteKey: input.activeVoteKey,
+				// oxlint-disable-next-line typescript/no-non-null-assertion
 				choice: input.choice!,
 				rawParticipantToken,
 				initialSubmissionKey: rawParticipantToken ? undefined : input.initialSubmissionKey,
 				timing
 			});
 
-			if (!result) invalid('Röstningen är inte längre öppen.');
+			if (!result) {
+				invalid('Röstningen är inte längre öppen.');
+			}
 
 			if (result.createdToken) {
 				setParticipantToken(event, input.publicLocator, result.createdToken);
@@ -91,7 +97,9 @@ export const submitSelectionBallotForm = form(submitSelectionBallotSchema, async
 				timing
 			});
 
-			if (!result) invalid('Röstningen är inte längre öppen.');
+			if (!result) {
+				invalid('Röstningen är inte längre öppen.');
+			}
 
 			if (result.createdToken) {
 				setParticipantToken(event, input.publicLocator, result.createdToken);
@@ -101,7 +109,7 @@ export const submitSelectionBallotForm = form(submitSelectionBallotSchema, async
 		}
 	}
 
-	participantMeeting({ publicLocator: input.publicLocator }).refresh();
+	// void participantMeeting({ publicLocator: input.publicLocator }).refresh();
 
 	return { success: true };
 });
@@ -116,9 +124,13 @@ export const withdrawDecisionBallot = command(
 			rawParticipantToken: getParticipantToken(event, input.publicLocator),
 			timing
 		});
-		if (!result) error(409, 'Röstningen är inte längre öppen.');
 
-		participantMeeting({ publicLocator: input.publicLocator }).refresh();
+		if (!result) {
+			error(409, 'Röstningen är inte längre öppen.');
+		}
+
+		void participantMeeting({ publicLocator: input.publicLocator }).refresh();
+
 		return result;
 	}
 );
@@ -133,9 +145,13 @@ export const withdrawSelectionBallot = command(
 			rawParticipantToken: getParticipantToken(event, input.publicLocator),
 			timing
 		});
-		if (!result) error(409, 'Röstningen är inte längre öppen.');
 
-		participantMeeting({ publicLocator: input.publicLocator }).refresh();
+		if (!result) {
+			error(409, 'Röstningen är inte längre öppen.');
+		}
+
+		void participantMeeting({ publicLocator: input.publicLocator }).refresh();
+
 		return result;
 	}
 );

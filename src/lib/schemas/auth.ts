@@ -1,4 +1,4 @@
-import z from 'zod';
+import { z } from 'zod';
 
 export const GENERIC_AUTH_ERROR_MESSAGE =
 	'Inloggningen kunde inte genomföras. Kontrollera uppgifterna och försök igen.';

@@ -8,7 +8,7 @@ export type CopyButtonPropsWithoutHTML = WithChildren<
 	Pick<ButtonProps, 'size' | 'variant'> & {
 		ref?: HTMLButtonElement | null;
 		text: string;
-		icon?: Snippet<[]>;
+		icon?: Snippet;
 		animationDuration?: number;
 		onCopy?: (status: 'success' | 'failure' | undefined) => void;
 	}
